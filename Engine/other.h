@@ -1,5 +1,7 @@
 #pragma once
 
+/*CREDIT TO MILXNOR*/
+
 #include <Windows.h>
 #include <vector>
 #include <string>
@@ -9,12 +11,12 @@
 #include <random>
 #include <fstream>
 
-static FORCEINLINE bool IsNaN(float A)
+static  bool IsNaN(float A)
 {
 	return ((*(uint32_t*)&A) & 0x7FFFFFFF) > 0x7F800000;
 }
 
-static FORCEINLINE bool IsFinite(float A)
+static  bool IsFinite(float A)
 {
 	return ((*(uint32_t*)&A) & 0x7F800000) != 0x7F800000;
 }
@@ -64,7 +66,7 @@ struct FVector
 		return std::format("{} {} {}", std::to_string(X), std::to_string(Y), std::to_string(Z));
 	}
 
-	FORCEINLINE bool ContainsNaN() const
+	 bool ContainsNaN() const
 	{
 		return (!IsFinite(X) ||
 			!IsFinite(Y) ||
@@ -133,7 +135,7 @@ enum class EDeathCause : uint8_t
 	EDeathCause_MAX = 41
 };
 
-static FORCEINLINE void SinCos(float* ScalarSin, float* ScalarCos, float  Value)
+static  void SinCos(float* ScalarSin, float* ScalarCos, float  Value)
 {
 	// Map Value to y in [-pi,pi], x = 2*pi*quotient + remainder.
 	float quotient = (0.31830988618f * 0.5f) * Value;
@@ -228,7 +230,7 @@ struct FRotator
 
 	FQuat Quaternion() const;
 
-	static __forceinline float ClampAxis(float Angle)
+	static  float ClampAxis(float Angle)
 	{
 		// returns Angle in the range (-360,360)
 		Angle = UE_Fmod(Angle, 360.f);
@@ -557,7 +559,7 @@ enum class EFortGameplayAbilityMontageSectionToPlay : uint8_t
 * @param Value  input angle
 * @return ASin of Value
 */
-static FORCEINLINE float FastAsin(float Value)
+static float FastAsin(float Value)
 {
 	// Clamp input to [-1,1].
 	bool nonnegative = (Value >= 0.0f);
@@ -1418,7 +1420,7 @@ enum class EStructuralWallPosition : uint8_t
 
 struct FTimespan
 {
-	__int64 Ticks;
+	int Ticks;
 };
 
 template <typename T>

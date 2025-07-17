@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Engine/structs.h>
+/*CREDIT TO MILXNOR*/
+
+#include <structs.h>
 //#include <Gameplay/helper.h>
 
 static TMap<FName, uint8_t*> GetRowMap(UObject* DataTable)
@@ -15,7 +17,7 @@ static uint8_t* FindRow(UObject* DataTable, const std::string& RowName)
 }
 
 // this dont really belong here
-static UObject* GetLootPackages()
+/*static UObject* GetLootPackages()
 {
 	if (FnVerDouble <= 2.69 || Engine_Version == 419) // TSOFTOBJECTPTR CHANGED or soemthing and theres no playlist
 		return nullptr;
@@ -59,7 +61,7 @@ static UObject* GetLootPackages()
 		return nullptr;
 
 	return LootPackages;
-}
+}*/
 
 struct FRichCurveKey
 {

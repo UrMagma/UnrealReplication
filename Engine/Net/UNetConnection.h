@@ -1,7 +1,8 @@
 #include "Engine/structs.h"
 #include "Engine/Net/enum.h"
+#include "Engine/other.h"
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetConnection.h#L39
-class UNetConnection : public UPlayer
+class UNetConnection : public UNetConnection
 {
     class UActorChannel;
 
@@ -20,9 +21,18 @@ class UNetConnection : public UPlayer
 	double			LastGoodPacketRealtime;	// Last real time a packet was considered valid
 	double			LastSendTime;			// Last time a packet was sent, for keepalives.
 	double			LastTickTime;			// Last time of polling.
-	int32			QueuedBits;			// Bits assumed to be queued up.
-	int32			TickCount;				// Count of ticks.
-	uint32			LastProcessedFrame;   // The last frame where we gathered and processed actors for this connection
+	int			QueuedBits;			// Bits assumed to be queued up.
+	int			TickCount;				// Count of ticks.
+	uint			LastProcessedFrame;   // The last frame where we gathered and processed actors for this connection
+};
+
+enum Type
+{
+	Invalid		= 0,		// This must be a client (which doesn't use this state) or uninitialized.
+	LoggingIn	= 1,		// The client is currently logging in.
+	Welcomed	= 2,		// Told client to load map and will respond with SendJoin
+	ReceivedJoin = 3,		// NMT_Join received and a player controller has been created
+	CleanedUp	= 4			// Cleanup has been called at least once, the connection is considered abandoned/terminated/gone
 };
 
 enum EConnectionState
