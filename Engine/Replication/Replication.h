@@ -24,8 +24,14 @@ int ServerReplicateActors_Prep(const float DeltaSeconds)
     int32_t NumClientsToTick = ClientConnections.Num();
 }
 
+https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Private/NetDriver.cpp#L4938
 int ServerReplicateActors(float DeltaSeconds)
 {
+    /*Im going to upload this even tho not much has changed but this will be switched to using Connection->ViewTarget, should already be using it
+    but life isnt perfect.
+    */
+
+
     //Replication Frame (Milxnor)
     if (Engine_Version == 416)
         ++* (int32_t*)(NetDriver + 0x288);
@@ -49,15 +55,34 @@ int ServerReplicateActors(float DeltaSeconds)
     for(int32_t i=0; i < ClientConnections.Num(); i++)
     {
         UNetConnection* Connection = ClientConnections[i];
+
+        if(FUNC_NetValidate = 2)
+        {
+
+        }
     }
         
-    //client shouldnt be ticked this frame.
+    //(HONESTLY JUST NEED TO USE VIEWTARGET FOR THE WHOLE THING)
     if(i >= NumClientsToTick)
     {
         for(int32_t ConsiderIDx = 0; ConsiderIDx < ConsideerList.Num(); ConsiderIDx++)
         {
             class AActor* Actor = ConsiderList[ConsiderIDx]->Actor;
+
+            if(Actor != NULL && !ConsiderList[ConsiderIDx] -> bPendingNetUpdate)
+            {
+                UActorChannel* Channel = UNetConnection->FindActorChannelRef(ConsiderList[ConsiderIDx]->WeakActor);
+
+                if(Channel != NULL && Channel->LastUpdateTime < ConsiderList[ConsiderIDx]->LastNetUpdateTimeStamp)
+                {
+                    ConsiderList[ConsiderIDx->bPendingNetUpdate]->bPendingNetUpdate = true;
+                }
+            }
         }
+        Connection->TimeSensitive = false;
     }
+
+    //Integrate ViewTarget, more portable maybe? and just the right way.
+   // https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Private/NetDriver.cpp#L5315
 }
 
