@@ -1,3 +1,6 @@
+#include "Engine/structs.h"
+#include "Engine/other.h"
+
 enum ENetMode
 {
 	NM_Standalone,
