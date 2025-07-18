@@ -1,6 +1,6 @@
-#include "Engine/structs.h"
-#include "Engine/other.h"
-#include "Engine/Net/UNetConnection.h"
+#include "./Engine/structs.h"
+#include "./Engine/other.h"
+#include "./Engine/Net/UNetConnection.h"
 
 auto Engine = GetEngine();
 

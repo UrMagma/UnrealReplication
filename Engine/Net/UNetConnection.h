@@ -1,6 +1,6 @@
-#include "Engine/structs.h"
-#include "Engine/Net/enum.h"
-#include "Engine/other.h"
+#include "./Engine/structs.h"
+#include "./Engine/Net/enum.h"
+#include "./Engine/other.h"
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetConnection.h#L39
 class UNetConnection : public UNetConnection
 {

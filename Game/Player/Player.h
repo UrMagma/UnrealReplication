@@ -1,6 +1,6 @@
-#include "Engine/DataTables.h"
-#include "Engine/other.h"
-#include "Engine/structs.h"
+#include "../Engine/DataTables.h"
+#include "../Engine/other.h"
+#include "../Engine/structs.h"
 
 UNetDriver
 class APlayer : public APlayer //APlayerPawn_Athena_C
