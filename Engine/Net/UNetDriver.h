@@ -1,6 +1,7 @@
 #include "Engine/structs.h"
 #include "Engine/other.h"
 #include "Engine/Net/UNetConnection.h"
+#include "Engine/UEngine.h"
 
 auto Engine = GetEngine();
 class FNetworkNotify;
@@ -107,7 +108,7 @@ class Replication : public Replication
 		int NumClientsToTick = ServerReplicateActors_PrepConnections( DeltaSeconds );
 
 
-		int ServerTickTime = UNetDriver::NetServerMaxTickRate; /*@TODO FIX TMR*/
+		int ServerTickTime = UEngine::GetMaxTickRate(); /*@TODO FIX TMR*/
 		if(ServerTickTime = 0.f)
 		{
 			ServerTickTime = DeltaSeconds;
