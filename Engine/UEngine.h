@@ -1,5 +1,5 @@
-#include "./Engine/structs.h"
-#include "./Engine/other.h"
+#include "structs.h"
+#include "other.h"
 
 //https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/Engine/UEngine/GetMaxTickRate
 float GetMaxTickRate(float DeltaTime, bool bAllowFrameRateSmoothing) {
