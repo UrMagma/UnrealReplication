@@ -71,6 +71,11 @@ void AddClientConnection(UNetConnection* NewConnection)
  
 }
 
+void SetWorld(UNetDriver* Driver, UWorld* World)
+{
+
+}
+
 int ServerReplicateActors_Prep()
 {
 
