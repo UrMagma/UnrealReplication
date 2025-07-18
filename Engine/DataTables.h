@@ -3,7 +3,7 @@
 /*CREDIT TO MILXNOR*/
 
 #include <structs.h>
-#include "./Vendor/memcury.h"
+//#include <Gameplay/helper.h>
 
 static TMap<FName, uint8_t*> GetRowMap(UObject* DataTable)
 {
@@ -129,8 +129,8 @@ struct FCurveTableRowHandle
 	bool Eval(float XValue, float* YValue, const FString& ContextString) const
 	{
 		__int64(__fastcall * EvalO)(__int64 CurveTable, float X, float* YValue, const FString & ContextString);
-		auto EvalPattern = Memcury::Scanner::FindPattern("4C 8B DC 53 48 83 EC 70 49 8B D8 0F 29 74 24 ? 45 33 C0 48 8D 05 ? ? ? ? 44 38 05 ? ? ? ? 4C 8D 51 08 49 8B D1").GetAs<void*>();
-		EvalO = decltype(EvalO)(EvalPattern);
+
+		EvalO = decltype(EvalO)(FindPattern("4C 8B DC 53 48 83 EC 70 49 8B D8 0F 29 74 24 ? 45 33 C0 48 8D 05 ? ? ? ? 44 38 05 ? ? ? ? 4C 8D 51 08 49 8B D1"));
 
 		EvalO(__int64(this), XValue, YValue, ContextString);
 	}

@@ -1,28 +1,29 @@
-#include "./Engine/structs.h"
-#include "./Engine/other.h"
-#include "./Engine/Net/UNetConnection.h"
+#include "Engine/structs.h"
+#include "Engine/other.h"
+#include "Engine/Net/UNetConnection.h"
 
 auto Engine = GetEngine();
+class FNetworkNotify;
+
+TArray<UNetConnection*> ClientConnections;
+
+
 
 class UNetDriver
 {
-    public:
-
-    Actor* Actor;
+public:
+    UObject* Actor;
     UObject* SubObj;
     UNetConnection* Connection;
 
-    public:
+	FString NetDriver; //temp?
+
     FString NetConnectionClass;
     FString ReplicationDriverClass;
     int NetServerMaxTickRate:1;
     int NetServerMaxTickRate;
     int MaxNetTickRate;
-
     UNetConnection* ServerConnection;
-    TArray<UNetConnection*> ClientConnections;
-
-
 };
 
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L540
@@ -30,17 +31,17 @@ struct  FActorDestructionInfo
 {
 public:
 
-	TWeakObjectPtr<ULevel> Level; 
+	//TWeakObjectPtr<ULevel> Level; 
 	TWeakObjectPtr<UObject> ObjOuter;
 	FVector DestroyedPosition;
-	FNetworkGUID NetGUID;
+	//FNetworkGUID NetGUID;
 	FString PathName;
 	FName StreamingLevelName;
 	//EChannelCloseReason Reason;
 
 	/** When true the destruction info data will be sent even if the viewers are not close to the actor */
 	bool bIgnoreDistanceCulling;
-
+};
 
 struct FActorPriority //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L568
 {
@@ -55,39 +56,83 @@ struct FActorPriority //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0
 		Priority(0), ActorInfo(NULL), Channel(NULL), DestructionInfo(NULL)
 	{}
 
-	FActorPriority(class UNetConnection* InConnection, class UActorChannel* InChannel, FNetworkObjectInfo* InActorInfo, const TArray<struct FNetViewer>& Viewers, bool bLowBandwidth);
-	FActorPriority(class UNetConnection* InConnection, FActorDestructionInfo * DestructInfo, const TArray<struct FNetViewer>& Viewers );
+	FActorPriority(UNetConnection* InConnection, class UActorChannel* InChannel, FNetworkObjectInfo* InActorInfo, const TArray<struct FNetViewer>& Viewers, bool bLowBandwidth);
+	FActorPriority(UNetConnection* InConnection, FActorDestructionInfo * DestructInfo, const TArray<struct FNetViewer>& Viewers );
 };
 
-//not used on newer versions.
-bool InitListen(class FNetworkNotify* InNotify, FURL& ListenUrl, bool breuseAddressAndPort, FString& Error)
+/*FNetworkObjectList& GetNetworkObjectList()
 {
+	return *NetworkObjects;
+}*/
 
+UNetDriver* Driver;
+
+UNetDriver* GetNetDriverName()
+{
+	return Driver;
 }
 
-//https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Private/NetDriver.cpp#L5315
-void AddClientConnection(UNetConnection* NewConnection)
+
+class Replication : public Replication
 {
- 
-}
+	//not used on newer versions.
+	bool InitListen(FNetworkNotify* InNotify, FURL& ListenUrl, bool breuseAddressAndPort, FString& Error);
 
-void SetWorld(UNetDriver* Driver, UWorld* World)
-{
+	int ServerReplicateActors_PrepConnections(float DeltaSeconds)
+	{
 
-}
+	}
 
-int ServerReplicateActors_Prep()
-{
+	void ServerReplicateActors_BuildConsiderList(TArrary<FNetworkObjectInfo*> OutConsiderList,float ServerTickTime) /*@TODO FIX TMR*/
+	{
+		int NumInitDormant = 0;
+		TArray<UObject*> ActorsToRemove; 
 
-}
+		for( TSharedPtr<FNetworkObjectInfo>& ObjectInfo : GetNetworkObjectList()) /*@TODO FIX TMR*/
+		{
+			FNetworkObjectInfo* ActorInfo = ObjectInfo.Get();
+			if(!ActorInfo->bPendingNetUpdate && World->TimeSeconds <= ActorInfo->NextUpdateTime) /*@TODO FIX TMR*/
+			{
+				continue;
+			}
 
-void ServerReplicateActors_BuildConsiderList(TArrary<FNetworkObjectInfo*> OutConsiderList,float ServerTickTime)
-{
-    
-}
+			//if(ActorInfo->GetNetDriverName() !=NetDriverName); @TODO FIX TMR
+		}
+	}
 
-int ServerReplicateActors(float DeltaSeconds)
-{
 
-}
+	https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Private/NetDriver.cpp#L4914
+	int ServerReplicateActors(float DeltaSeconds)
+	{
+		int NumClientsToTick = ServerReplicateActors_PrepConnections( DeltaSeconds );
 
+
+		int ServerTickTime = UNetDriver::NetServerMaxTickRate; /*@TODO FIX TMR*/
+		if(ServerTickTime = 0.f)
+		{
+			ServerTickTime = DeltaSeconds;
+		}
+		else
+		{
+			ServerTickTime = 1.F/ServerTickTime;
+		}
+
+		TArray<FNetworkObjectInfo*> ConsiderList;
+		
+		ConsiderList.Num();
+
+		ServerReplicateActors_BuildConsiderList(ConsiderList, ServerTickTime);
+
+		TSet<UNetConnection*> ConnectionsToClose;
+
+		if(i >= NumClientsToTick == 0) 
+		{
+			for(int ConsiderIdx = 0; ConsiderIdx < ConsiderList.Num(); ConsiderIdx++)
+			{
+				UObject* Actor = ConsiderList[ConsiderIdx]->Actor;
+
+				//if(Actor != NULL  &&)
+			}
+		}
+	}
+};

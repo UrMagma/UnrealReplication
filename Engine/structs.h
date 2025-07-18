@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include <thread>
 
-#include "other.h"
+#include "Engine/other.h"
 #include <regex>
 
 using namespace std::chrono;
@@ -78,7 +78,7 @@ public:
 		ArrayMax = 0;
 	}
 
-	INL auto Num() const { return ArrayNum; }
+	 auto Num() const { return ArrayNum; }
 
 	INL ElementType& operator[](int Index) const { return Data[Index]; }
 

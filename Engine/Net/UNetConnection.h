@@ -1,6 +1,6 @@
-#include "./Engine/structs.h"
-#include "./Engine/Net/enum.h"
-#include "./Engine/other.h"
+#include "Engine/structs.h"
+#include "Engine/Net/enum.h"
+#include "Engine/other.h"
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetConnection.h#L39
 class UNetConnection : public UNetConnection
 {
@@ -12,9 +12,9 @@ class UNetConnection : public UNetConnection
 
     TArray<class UChannel*> OpenChannels;
 
-    Actor* ViewTarget;
+    UObject* ViewTarget;
 
-    Actor* OwningActor;
+    UObject* OwningActor;
 
     double			LastReceiveTime;		// Last time a packet was received, for timeout checking.
 	double			LastReceiveRealtime;	// Last time a packet was received, using real time seconds (FPlatformTime::Seconds)
