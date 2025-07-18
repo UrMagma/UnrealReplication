@@ -2,42 +2,26 @@
 #include "Engine/other.h"
 #include "Engine/Net/UNetConnection.h"
 #include "Engine/UEngine.h"
+#include "Engine/World/UWorld.h"
 
-auto Engine = GetEngine();
+//Im sorry this code is shit lol
+
 class FNetworkNotify;
-
-TArray<UNetConnection*> ClientConnections;
-
-
-
+UWorld* World;
 class UNetDriver
 {
 public:
     UObject* Actor;
     UObject* SubObj;
     UNetConnection* Connection;
-
-	FString NetDriver; //temp?
-
     FString NetConnectionClass;
+	FString NetDriver;
     FString ReplicationDriverClass;
     int NetServerMaxTickRate:1;
     int NetServerMaxTickRate;
+	TArray<UNetConnection*> ClientConnections;
     int MaxNetTickRate;
     UNetConnection* ServerConnection;
-
-	enum ENetMode
-	{
-		NM_Standalone,
-		NM_DedicatedServer,
-		NM_ListenServer,
-		NM_Client,
-		NM_MAX,
-	};
-
-	ENetMode GetNetMode() {
-		return ENetMode::NM_DedicatedServer;
-	}
 };
 
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L540
@@ -74,10 +58,10 @@ struct FActorPriority //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0
 	FActorPriority(UNetConnection* InConnection, FActorDestructionInfo * DestructInfo, const TArray<struct FNetViewer>& Viewers );
 };
 
-/*FNetworkObjectList& GetNetworkObjectList()
+FNetworkObjectList& GetNetworkObjectList()
 {
 	return *NetworkObjects;
-}*/
+}
 
 UNetDriver* Driver;
 
@@ -87,14 +71,19 @@ UNetDriver* GetNetDriverName()
 }
 
 
-class Replication : public Replication
+class Replication
 {
 	//not used on newer versions.
 	bool InitListen(FNetworkNotify* InNotify, FURL& ListenUrl, bool breuseAddressAndPort, FString& Error);
 
-	int ServerReplicateActors_PrepConnections(float DeltaSeconds)
+	int ServerReplicateActors_PrepConnections(UNetDriver* Drivers)
 	{
+		
+	}
 
+	static bool IsActorDormant(FNetworkObjectInfo* ActorInfo, const TWeakObjectPtr<UNetConnection>& Connection)
+	{
+		return ActorInfo->DormantConnections.Contains(Connection);
 	}
 
 	void ServerReplicateActors_BuildConsiderList(TArrary<FNetworkObjectInfo*> OutConsiderList,float ServerTickTime) /*@TODO FIX TMR*/
@@ -102,10 +91,10 @@ class Replication : public Replication
 		int NumInitDormant = 0;
 		TArray<UObject*> ActorsToRemove; 
 
-		for( TSharedPtr<FNetworkObjectInfo>& ObjectInfo : GetNetworkObjectList()) /*@TODO FIX TMR*/
+		for(TSharedPtr<FNetworkObjectInfo>* ObjectInfo : GetNetworkObjectList())
 		{
 			FNetworkObjectInfo* ActorInfo = ObjectInfo.Get();
-			if(!ActorInfo->bPendingNetUpdate && World->TimeSeconds <= ActorInfo->NextUpdateTime) /*@TODO FIX TMR*/
+			if(!ActorInfo->bPendingNetUpdate && World->TimeSeconds <= ActorInfo->NextUpdateTime)
 			{
 				continue;
 			}

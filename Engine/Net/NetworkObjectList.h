@@ -4,6 +4,9 @@
 class AActor;
 class FArchive;
 
+class UNetConnection;
+class UNetDriver;
+
 class FNetworkObjectKeyFuncs
 {
 
@@ -11,6 +14,7 @@ class FNetworkObjectKeyFuncs
 
 struct FNetworkObjectInfo
 {
+	public:
     /** Pointer to the replicated actor. */
 	AActor* Actor;
 
@@ -47,9 +51,9 @@ struct FNetworkObjectInfo
     {
         return NetDrive;
     }
-};
+}
 
-/*class FNetworkObjectList : public FNetworkObjectList
+class FNetworkObjectList : public FNetworkObjectList
 {
     TSet<TSharedPtr<FNetworkObjectInfo>, FNetworkObjectKeyFuncs> FNetworkObjectSet;
 
@@ -66,4 +70,4 @@ struct FNetworkObjectInfo
         }
     }
 
-};*/
+}
