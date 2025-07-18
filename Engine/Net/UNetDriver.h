@@ -25,6 +25,19 @@ public:
     int NetServerMaxTickRate;
     int MaxNetTickRate;
     UNetConnection* ServerConnection;
+
+	enum ENetMode
+	{
+		NM_Standalone,
+		NM_DedicatedServer,
+		NM_ListenServer,
+		NM_Client,
+		NM_MAX,
+	};
+
+	ENetMode GetNetMode() {
+		return ENetMode::NM_DedicatedServer;
+	}
 };
 
 //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L540
