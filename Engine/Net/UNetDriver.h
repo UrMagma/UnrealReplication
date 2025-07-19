@@ -3,139 +3,389 @@
 #include "Engine/Net/UNetConnection.h"
 #include "Engine/UEngine.h"
 #include "Engine/World/UWorld.h"
-
-//Im sorry this code is shit lol
+#include "Sockets.h"
+#include "SocketSubsystem.h"
+#include "Engine/Net/ActorChannel.h"
+#include "Engine/PlayerController.h"
 
 class FNetworkNotify;
 UWorld* World;
+
 class UNetDriver
 {
 public:
-    UObject* Actor;
-    UObject* SubObj;
-    UNetConnection* Connection;
     FString NetConnectionClass;
-	FString NetDriver;
+    FString NetDriver;
     FString ReplicationDriverClass;
-    int NetServerMaxTickRate:1;
     int NetServerMaxTickRate;
-	TArray<UNetConnection*> ClientConnections;
     int MaxNetTickRate;
+    TArray<UNetConnection*> ClientConnections;
     UNetConnection* ServerConnection;
-};
-
-//https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L540
-struct  FActorDestructionInfo
-{
-public:
-
-	//TWeakObjectPtr<ULevel> Level; 
-	TWeakObjectPtr<UObject> ObjOuter;
-	FVector DestroyedPosition;
-	//FNetworkGUID NetGUID;
-	FString PathName;
-	FName StreamingLevelName;
-	//EChannelCloseReason Reason;
-
-	/** When true the destruction info data will be sent even if the viewers are not close to the actor */
-	bool bIgnoreDistanceCulling;
-};
-
-struct FActorPriority //https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Classes/Engine/NetDriver.h#L568
-{
-	int						Priority;	// Update priority, higher = more important.
-	
-	FNetworkObjectInfo*			ActorInfo;	// Actor info.
-	class UActorChannel*		Channel;	// Actor channel.
-
-	FActorDestructionInfo *	DestructionInfo;	// Destroy an actor
-
-	FActorPriority() : 
-		Priority(0), ActorInfo(NULL), Channel(NULL), DestructionInfo(NULL)
-	{}
-
-	FActorPriority(UNetConnection* InConnection, class UActorChannel* InChannel, FNetworkObjectInfo* InActorInfo, const TArray<struct FNetViewer>& Viewers, bool bLowBandwidth);
-	FActorPriority(UNetConnection* InConnection, FActorDestructionInfo * DestructInfo, const TArray<struct FNetViewer>& Viewers );
-};
-
-FNetworkObjectList& GetNetworkObjectList()
-{
-	return *NetworkObjects;
-}
-
-UNetDriver* Driver;
-
-UNetDriver* GetNetDriverName()
-{
-	return Driver;
-}
+    TArray<FActorDestructionInfo> RecentlyDestroyedActors; // Track recently destroyed actors for replication
 
 
-class Replication
-{
-	//not used on newer versions.
-	bool InitListen(FNetworkNotify* InNotify, FURL& ListenUrl, bool breuseAddressAndPort, FString& Error);
 
-	int ServerReplicateActors_PrepConnections(UNetDriver* Drivers)
-	{
-		
-	}
+    // Socket handle, etc, would go here.
+    FSocket* ListenSocket;
 
-	static bool IsActorDormant(FNetworkObjectInfo* ActorInfo, const TWeakObjectPtr<UNetConnection>& Connection)
-	{
-		return ActorInfo->DormantConnections.Contains(Connection);
-	}
+    UNetDriver()
+        : NetServerMaxTickRate(30), MaxNetTickRate(60), ServerConnection(nullptr), ListenSocket(7777)
+    {}
 
-	void ServerReplicateActors_BuildConsiderList(TArrary<FNetworkObjectInfo*> OutConsiderList,float ServerTickTime) /*@TODO FIX TMR*/
-	{
-		int NumInitDormant = 0;
-		TArray<UObject*> ActorsToRemove; 
+    /** Initialize as a listen server: bind socket, listen for clients, setup network state */
+    bool InitListen(FNetworkNotify* InNotify, FURL& ListenUrl, bool bReuseAddressAndPort, FString& Error)
+    {
+        ISocketSubsystem* SocketSubsystem = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
+        if (!SocketSubsystem)
+        {
+            Error = TEXT("Failed to get socket subsystem");
+            return false;
+        }
 
-		for(TSharedPtr<FNetworkObjectInfo>* ObjectInfo : GetNetworkObjectList())
-		{
-			FNetworkObjectInfo* ActorInfo = ObjectInfo.Get();
-			if(!ActorInfo->bPendingNetUpdate && World->TimeSeconds <= ActorInfo->NextUpdateTime)
-			{
-				continue;
-			}
+        // Create a TCP socket for listening
+        ListenSocket = SocketSubsystem->CreateSocket(NAME_Stream, TEXT("UNetDriver Listen Socket"), false);
+        if (!ListenSocket)
+        {
+            Error = TEXT("Failed to create listen socket");
+            return false;
+        }
 
-			//if(ActorInfo->GetNetDriverName() !=NetDriverName); @TODO FIX TMR
-		}
-	}
+        // Setup address to bind
+        TSharedRef<FInternetAddr> Addr = SocketSubsystem->CreateInternetAddr();
+        bool bIsValid;
+        Addr->SetIp(*ListenUrl.Host, bIsValid);
+        Addr->SetPort(ListenUrl.Port);
+        if (!bIsValid)
+        {
+            Error = TEXT("Invalid IP address");
+            SocketSubsystem->DestroySocket(ListenSocket);
+            ListenSocket = nullptr;
+            return false;
+        }
 
+        if (bReuseAddressAndPort)
+        {
+            ListenSocket->SetReuseAddr(true);
+            ListenSocket->SetReusePort(true);
+        }
 
-	//https://github.com/EpicGames/UnrealEngine/blob/3abfe77d0b24a6d8bacebd27766912e5a5fa6f02/Engine/Source/Runtime/Engine/Private/NetDriver.cpp#L4914
-	int ServerReplicateActors(float DeltaSeconds)
-	{
-		int NumClientsToTick = ServerReplicateActors_PrepConnections( DeltaSeconds );
+        // Bind socket
+        if (!ListenSocket->Bind(*Addr))
+        {
+            Error = TEXT("Failed to bind listen socket");
+            SocketSubsystem->DestroySocket(ListenSocket);
+            ListenSocket = nullptr;
+            return false;
+        }
 
+        // Set non-blocking
+        ListenSocket->SetNonBlocking(true);
 
-		int ServerTickTime = UEngine::GetMaxTickRate(DeltaSeconds, true); 
-		if(ServerTickTime = 0.f)
-		{
-			ServerTickTime = DeltaSeconds;
-		}
-		else
-		{
-			ServerTickTime = 1.F/ServerTickTime;
-		}
+        // Start listening
+        if (!ListenSocket->Listen(8)) // backlog of 8 connections
+        {
+            Error = TEXT("Failed to listen on socket");
+            SocketSubsystem->DestroySocket(ListenSocket);
+            ListenSocket = nullptr;
+            return false;
+        }
 
-		TArray<FNetworkObjectInfo*> ConsiderList;
-		
-		ConsiderList.Num();
+        return true;
+    }
 
-		ServerReplicateActors_BuildConsiderList(ConsiderList, ServerTickTime);
+    /** Accept new connections if any*/
+    void TickDispatch(float DeltaSeconds)
+    {
+        if (!ListenSocket)
+            return;
 
-		TSet<UNetConnection*> ConnectionsToClose;
+        bool bHasPendingConnection = false;
+        while (ListenSocket->HasPendingConnection(bHasPendingConnection) && bHasPendingConnection)
+        {
+            // Accept incoming connection
+            FSocket* NewSocket = ListenSocket->Accept(TEXT("Incoming Connection"));
+            if (NewSocket)
+            {
+                // Create a new NetConnection for this socket
+                UNetConnection* NewConnection = new UNetConnection();
+                NewConnection->InitConnection(NewSocket);
+                ClientConnections.Add(NewConnection);
+            }
+            else
+            {
+                // No socket accepted, break out
+                break;
+            }
+        }
+    }
 
-		if(i >= NumClientsToTick == 0) 
-		{
-			for(int ConsiderIdx = 0; ConsiderIdx < ConsiderList.Num(); ConsiderIdx++)
-			{
-				UObject* Actor = ConsiderList[ConsiderIdx]->Actor;
+    /** Prepare connections for replication tick: reset per-tick state, validate open connections */
+    void PrepareConnections()
+    {
+        for (int32 i = ClientConnections.Num() - 1; i >= 0; --i)
+        {
+            UNetConnection* Conn = ClientConnections[i];
+            if (!Conn || Conn->State == USOCK_Closed)
+            {
+                ClientConnections.RemoveAt(i);
+                continue;
+            }
+            Conn->ResetReplicationState();
+        }
+    }
 
-				//if(Actor != NULL  &&)
-			}
-		}
-	}
+    /** Build the list of networked actors to consider for replication this tick */
+    void BuildConsiderList(TArray<FNetworkObjectInfo*>& OutConsiderList, float ServerTickTime)
+    {
+        for (TSharedPtr<FNetworkObjectInfo> ObjectInfo : GetNetworkObjectList())
+        {
+            FNetworkObjectInfo* ActorInfo = ObjectInfo.Get();
+            if (!ActorInfo || !ActorInfo->Actor)
+                continue;
+            // Only replicate if pending net update or needs scheduled update
+            if (!ActorInfo->bPendingNetUpdate && World->TimeSeconds <= ActorInfo->NextUpdateTime)
+                continue;
+            // Filter out dormant, irrelevant, torn-off actors
+            if (ActorInfo->bIsDormant || ActorInfo->bTornOff)
+                continue;
+            OutConsiderList.Add(ActorInfo);
+        }
+    }
+
+    /** Calculate priority for each actor and sort for replication */
+    void PrioritizeActors(const TArray<FNetworkObjectInfo*>& ConsiderList, TArray<FActorPriority>& OutPrioritizedList, const TArray<FNetViewer>& Viewers)
+    {
+        for (FNetworkObjectInfo* ActorInfo : ConsiderList)
+        {
+            // Find or create actor channel for each connection as needed
+            UActorChannel* Channel = FindOrCreateActorChannel(ActorInfo->Actor);
+            // Calculate priority (distance, relevance, etc.)
+            int Priority = CalculateActorPriority(ActorInfo, Channel, Viewers);
+            OutPrioritizedList.Add(FActorPriority(Priority, ActorInfo, Channel, nullptr));
+        }
+        // Sort descending by priority (highest = most important)
+        OutPrioritizedList.Sort([](const FActorPriority& A, const FActorPriority& B) { return A.Priority > B.Priority; });
+    }
+
+    /** Replicate all relevant actors to all connections */
+    void ServerReplicateActors(float DeltaSeconds)
+    {
+        PrepareConnections();
+
+        float ServerTickTime = UEngine::GetMaxTickRate(DeltaSeconds, true);
+        if (ServerTickTime == 0.f)
+        {
+            ServerTickTime = DeltaSeconds;
+        }
+        else
+        {
+            ServerTickTime = 1.f / ServerTickTime;
+        }
+
+        TArray<FNetworkObjectInfo*> ConsiderList;
+        BuildConsiderList(ConsiderList, ServerTickTime);
+
+        TArray<FNetViewer> Viewers;
+        // Build Viewers array from all player controllers, etc.
+        BuildNetViewers(Viewers);
+
+        TArray<FActorPriority> PrioritizedList;
+        PrioritizeActors(ConsiderList, PrioritizedList, Viewers);
+
+        // Replicate prioritized actors to each connection
+        for (UNetConnection* Connection : ClientConnections)
+        {
+            if (!Connection || Connection->State == USOCK_Closed)
+                continue;
+            for (const FActorPriority& ActorPri : PrioritizedList)
+            {
+                ReplicateToConnection(Connection, ActorPri.ActorInfo, ActorPri.Channel);
+            }
+        }
+
+        // Replicate destruction events
+        ProcessDestruction();
+
+        // Enforce per-connection bandwidth limits
+        EnforceBandwidthLimits();
+    }
+
+    /** Replicate a single actor to a connection, using its actor channel */
+    void ReplicateToConnection(UNetConnection* Connection, FNetworkObjectInfo* ActorInfo, UActorChannel* Channel)
+    {
+        if (!Connection || !ActorInfo || !ActorInfo->Actor)
+            return;
+        if (!Channel)
+        {
+            Channel = CreateActorChannel(Connection, ActorInfo->Actor);
+            if (!Channel)
+                return;
+        }
+        // Serialize changed properties of ActorInfo->Actor
+        FOutBunch Bunch;
+        SerializeActorProperties(ActorInfo->Actor, Bunch);
+        // Send reliably or unreliably depending on actor/channel state
+        if (Channel->IsReliable())
+        {
+            Channel->SendReliable(Bunch);
+        }
+        else
+        {
+            Channel->SendUnreliable(Bunch);
+        }
+    }
+
+    /** Track and replicate destruction of actors */
+    void ProcessDestruction()
+    {
+        for (const FActorDestructionInfo& Destruction : RecentlyDestroyedActors)
+        {
+            for (UNetConnection* Connection : ClientConnections)
+            {
+                if (!Connection)
+                    continue;
+                // Notify connection about actor destruction
+                Connection->NotifyActorDestroyed(Destruction);
+            }
+        }
+        // Clear after replicating
+        RecentlyDestroyedActors.Empty();
+    }
+
+    /** Monitor and enforce bandwidth limits per connection */
+    void EnforceBandwidthLimits()
+    {
+        for (UNetConnection* Connection : ClientConnections)
+        {
+            if (!Connection)
+                continue;
+            // Check bytes sent this tick and throttle if over limit
+            if (Connection->BytesSentThisTick > Connection->MaxAllowedBytes)
+            {
+                Connection->Throttle();
+            }
+        }
+    }
+
+    // --- Helper and stub functions ---
+
+    TArray<TSharedPtr<FNetworkObjectInfo>>& GetNetworkObjectList()
+    {
+        // Return reference to global or driver-owned networked object list
+        static TArray<TSharedPtr<FNetworkObjectInfo>> Dummy;
+        return Dummy;
+    }
+
+    void BuildNetViewers(TArray<FNetViewer>& OutViewers)
+    {
+        if (!World)
+            return;
+
+        for (FConstPlayerControllerIterator Iterator = World->GetPlayerControllerIterator(); Iterator; ++Iterator)
+        {
+            APlayerController* PC = Iterator->Get();
+            if (PC && PC->GetPawn())
+            {
+                FNetViewer Viewer;
+                Viewer.Viewer = PC;
+                Viewer.ViewLocation = PC->GetPawn()->GetActorLocation();
+                Viewer.ViewRotation = PC->GetPawn()->GetActorRotation();
+                OutViewers.Add(Viewer);
+            }
+        }
+    }
+
+    UActorChannel* FindOrCreateActorChannel(UObject* Actor)
+    {
+        if (!Actor)
+            return nullptr;
+
+        // Check existing connections for an actor channel for this actor
+        for (UNetConnection* Connection : ClientConnections)
+        {
+            if (!Connection)
+                continue;
+            for (UActorChannel* Channel : Connection->ActorChannels)
+            {
+                if (Channel && Channel->GetActor() == Actor)
+                {
+                    return Channel;
+                }
+            }
+        }
+
+        // Not found, create a new one for the first connection as an example
+        if (ClientConnections.Num() > 0)
+        {
+            return CreateActorChannel(ClientConnections[0], Actor);
+        }
+
+        return nullptr;
+    }
+
+    UActorChannel* CreateActorChannel(UNetConnection* Connection, UObject* Actor)
+    {
+        if (!Connection || !Actor)
+            return nullptr;
+
+        UActorChannel* NewChannel = new UActorChannel(Connection);
+        if (!NewChannel->Init(Actor))
+        {
+            delete NewChannel;
+            return nullptr;
+        }
+
+        Connection->ActorChannels.Add(NewChannel);
+        return NewChannel;
+    }
+
+    int CalculateActorPriority(FNetworkObjectInfo* ActorInfo, UActorChannel* Channel, const TArray<FNetViewer>& Viewers)
+    {
+        if (!ActorInfo || !ActorInfo->Actor)
+            return 0;
+
+        FVector ActorLocation = ActorInfo->Actor->GetActorLocation();
+        float MinDistanceSq = FLT_MAX;
+
+        for (const FNetViewer& Viewer : Viewers)
+        {
+            float DistSq = FVector::DistSquared(ActorLocation, Viewer.ViewLocation);
+            if (DistSq < MinDistanceSq)
+            {
+                MinDistanceSq = DistSq;
+            }
+        }
+
+        // Priority inversely proportional to distance, clamped to some range
+        float Distance = FMath::Sqrt(MinDistanceSq);
+        int Priority = FMath::Clamp<int>(10000 - static_cast<int>(Distance * 100), 0, 10000);
+
+        // Increase priority if actor has pending net update
+        if (ActorInfo->bPendingNetUpdate)
+        {
+            Priority += 5000;
+        }
+
+        return Priority;
+    }
+
+    void SerializeActorProperties(UObject* Actor, FOutBunch& Bunch)
+    {
+        if (!Actor)
+            return;
+
+        // Example: serialize a few properties by name (assuming reflection)
+        for (TFieldIterator<FProperty> It(Actor->GetClass()); It; ++It)
+        {
+            FProperty* Property = *It;
+            if (!Property)
+                continue;
+
+            // Only serialize replicated properties
+            if (Property->HasAnyPropertyFlags(CPF_Net))
+            {
+                Property->SerializeItem(Bunch, Property->ContainerPtrToValuePtr<void>(Actor));
+            }
+        }
+    }
 };
