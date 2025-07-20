@@ -1,52 +1,70 @@
 #pragma once
 
-/*CREDIT TO MILXNOR*/
+/*
+* CREDIT TO MILXNOR
+*
+* This header file contains various utility functions, structures, and enumerations,
+* primarily designed to mimic or integrate with Unreal Engine's core types and functionalities.
+* It includes mathematical utilities (vectors, rotators, quaternions),
+* game-specific enumerations (game phases, death causes, item rarities),
+* and helper functions for memory pattern scanning and file operations.
+*/
 
-#include <Windows.h>
-#include <vector>
-#include <string>
-#define _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES // Ensures M_PI and other math constants are available from <math.h>
 
-#include <math.h>
-#include <random>
-#include <fstream>
+#include <Windows.h> // For Windows-specific types like uint32_t, MessageBoxA, GetModuleHandleW, FreeLibraryAndExitThread
+#include <vector>    // For std::vector
+#include <string>    // For std::string, std::to_string, std::format
+#include <math.h>    // For fabsf, sqrtf, fmod, M_PI
+#include <random>    // For std::random_device, std::mt19937, std::uniform_int_distribution
+#include <fstream>   // For std::ofstream
 
-static  bool IsNaN(float A)
+// Utility functions for floating-point number checks.
+// These functions check for NaN (Not a Number) and finiteness using bitwise operations
+// on the float's underlying integer representation, as commonly done in game engines
+// for performance or specific behavior.
+static bool IsNaN(float A)
 {
 	return ((*(uint32_t*)&A) & 0x7FFFFFFF) > 0x7F800000;
 }
 
-static  bool IsFinite(float A)
+static bool IsFinite(float A)
 {
 	return ((*(uint32_t*)&A) & 0x7F800000) != 0x7F800000;
 }
 
+/**
+ * @brief Represents a 3D vector or point.
+ * Mimics Unreal Engine's FVector structure.
+ */
 struct FVector
 {
 	float X;
 	float Y;
 	float Z;
 
-	FVector() : X(0), Y(0), Z(0) {}
+	// Constructors
+	FVector() : X(0.0f), Y(0.0f), Z(0.0f) {}
 	FVector(float x, float y, float z) : X(x), Y(y), Z(z) {}
-	FVector(int x, int y, int z) : X(x), Y(y), Z(z) {}
+	FVector(int x, int y, int z) : X(static_cast<float>(x)), Y(static_cast<float>(y)), Z(static_cast<float>(z)) {}
 
-	FVector operator+(const FVector& A)
+	// Operator overloads for vector arithmetic
+	FVector operator+(const FVector& A) const
 	{
 		return FVector{ this->X + A.X, this->Y + A.Y, this->Z + A.Z };
 	}
 
-	FVector operator-(const FVector& A)
+	FVector operator-(const FVector& A) const
 	{
 		return FVector{ this->X - A.X, this->Y - A.Y, this->Z - A.Z };
 	}
 
-	FVector operator*(const float A)
+	FVector operator*(const float A) const
 	{
 		return FVector{ this->X * A, this->Y * A, this->Z * A };
 	}
 
-	bool operator==(const FVector& A)
+	bool operator==(const FVector& A) const
 	{
 		return X == A.X && Y == A.Y && Z == A.Z;
 	}
@@ -61,19 +79,29 @@ struct FVector
 		*this = *this - A;
 	}
 
-	std::string Describe()
+	/**
+	 * @brief Returns a string representation of the vector.
+	 * Requires C++20 for std::format.
+	 */
+	std::string Describe() const
 	{
+		// Note: std::format is a C++20 feature. If using an older standard,
+		// you might need to use string streams (std::stringstream) instead.
 		return std::format("{} {} {}", std::to_string(X), std::to_string(Y), std::to_string(Z));
 	}
 
-	 bool ContainsNaN() const
+	/**
+	 * @brief Checks if any component of the vector is NaN (Not a Number).
+	 */
+	bool ContainsNaN() const
 	{
-		return (!IsFinite(X) ||
-			!IsFinite(Y) ||
-			!IsFinite(Z));
+		return (!IsFinite(X) || !IsFinite(Y) || !IsFinite(Z));
 	}
 };
 
+/**
+ * @brief Enumerates the possible statuses of a server.
+ */
 enum class EServerStatus : uint8_t
 {
 	Up = 0,
@@ -82,6 +110,9 @@ enum class EServerStatus : uint8_t
 	Restarting = 3
 };
 
+/**
+ * @brief Defines return types for montage playback operations.
+ */
 enum class EMontagePlayReturnType : uint8_t
 {
 	MontageLength = 0,
@@ -89,6 +120,9 @@ enum class EMontagePlayReturnType : uint8_t
 	EMontagePlayReturnType_MAX = 2
 };
 
+/**
+ * @brief Enumerates various causes of death in the game.
+ */
 enum class EDeathCause : uint8_t
 {
 	OutsideSafeZone = 0,
@@ -108,7 +142,7 @@ enum class EDeathCause : uint8_t
 	Minigun = 14,
 	Bow = 15,
 	Trap = 16,
-	DBNOTimeout = 17,
+	DBNOTimeout = 17, // Down But Not Out Timeout
 	Banhammer = 18,
 	RemovedFromGame = 19,
 	MassiveMelee = 20,
@@ -135,10 +169,17 @@ enum class EDeathCause : uint8_t
 	EDeathCause_MAX = 41
 };
 
-static  void SinCos(float* ScalarSin, float* ScalarCos, float  Value)
+/**
+ * @brief Computes the sine and cosine of an angle simultaneously using a minimax approximation.
+ * Optimized for performance, similar to Unreal Engine's FMath::SinCos.
+ * @param ScalarSin Pointer to store the computed sine value.
+ * @param ScalarCos Pointer to store the computed cosine value.
+ * @param Value The input angle in radians.
+ */
+static void SinCos(float* ScalarSin, float* ScalarCos, float Value)
 {
 	// Map Value to y in [-pi,pi], x = 2*pi*quotient + remainder.
-	float quotient = (0.31830988618f * 0.5f) * Value;
+	float quotient = (0.31830988618f * 0.5f) * Value; // (1 / (2*PI)) * 0.5
 	if (Value >= 0.0f)
 	{
 		quotient = (float)((int)(quotient + 0.5f));
@@ -151,12 +192,12 @@ static  void SinCos(float* ScalarSin, float* ScalarCos, float  Value)
 
 	// Map y to [-pi/2,pi/2] with sin(y) = sin(Value).
 	float sign;
-	if (y > 1.57079632679f)
+	if (y > 1.57079632679f) // M_PI / 2
 	{
 		y = M_PI - y;
 		sign = -1.0f;
 	}
-	else if (y < -1.57079632679f)
+	else if (y < -1.57079632679f) // -M_PI / 2
 	{
 		y = -M_PI - y;
 		sign = -1.0f;
@@ -168,42 +209,60 @@ static  void SinCos(float* ScalarSin, float* ScalarCos, float  Value)
 
 	float y2 = y * y;
 
-	// 11-degree minimax approximation
+	// 11-degree minimax approximation for sine
 	*ScalarSin = (((((-2.3889859e-08f * y2 + 2.7525562e-06f) * y2 - 0.00019840874f) * y2 + 0.0083333310f) * y2 - 0.16666667f) * y2 + 1.0f) * y;
 
-	// 10-degree minimax approximation
+	// 10-degree minimax approximation for cosine
 	float p = ((((-2.6051615e-07f * y2 + 2.4760495e-05f) * y2 - 0.0013888378f) * y2 + 0.041666638f) * y2 - 0.5f) * y2 + 1.0f;
 	*ScalarCos = sign * p;
 }
 
-template <class  T>
-static auto DegreesToRadians(T const& DegVal) -> decltype(DegVal* (M_PI / 180.f))
+/**
+ * @brief Converts an angle from degrees to radians.
+ * @tparam T The numeric type of the input value.
+ * @param DegVal The angle in degrees.
+ * @return The angle in radians.
+ */
+template <class T>
+static auto DegreesToRadians(T const& DegVal) -> decltype(DegVal * (M_PI / 180.f))
 {
-	return DegVal * (M_PI / 180.f);
+	return DegVal * (static_cast<float>(M_PI) / 180.f);
 }
 
+// Forward declaration for FQuat, as it's used in FRotator.
 struct FQuat;
 
+/**
+ * @brief Custom floating-point modulo function, similar to UE's FMath::Fmod.
+ * Handles edge cases for very small divisors.
+ * @param X The dividend.
+ * @param Y The divisor.
+ * @return The floating-point remainder of X / Y.
+ */
 float UE_Fmod(float X, float Y)
 {
-	const float AbsY = fabs(Y);
-	if (AbsY <= 1.e-8f)
+	const float AbsY = fabsf(Y);
+	if (AbsY <= 1.e-8f) // Check for near-zero divisor
 	{
-		// FmodReportError(X, Y);
-		return 0.0;
+		// FmodReportError(X, Y); // Original UE comment, indicating error reporting
+		return 0.0f;
 	}
 
 	// Convert to double for better precision, since intermediate rounding can lose enough precision to skew the result.
-	const double DX = double(X);
-	const double DY = double(Y);
+	const double DX = static_cast<double>(X);
+	const double DY = static_cast<double>(Y);
 
 	const double Div = (DX / DY);
-	const double IntPortion = DY * trunc(Div);
+	const double IntPortion = DY * trunc(Div); // trunc discards the fractional part
 	const double Result = DX - IntPortion;
+
 	// Convert back to float. This is safe because the result will by definition not exceed the X input.
-	return float(Result);
+	return static_cast<float>(Result);
 }
 
+/**
+ * @brief Enumerates the specific steps within an Athena (Battle Royale) game phase.
+ */
 enum class EAthenaGamePhaseStep : uint8_t
 {
 	None = 0,
@@ -218,68 +277,97 @@ enum class EAthenaGamePhaseStep : uint8_t
 	Countdown = 9,
 	FinalCountdown = 10,
 	EndGame = 11,
-	Count = 12,
-	EAthenaGamePhaseStep_MAX = 13,
+	Count = 12, // Number of valid steps
+	EAthenaGamePhaseStep_MAX = 13, // Maximum enum value
 };
 
+/**
+ * @brief Represents a rotator (Euler angles) in Pitch, Yaw, Roll.
+ * Mimics Unreal Engine's FRotator structure.
+ */
 struct FRotator
 {
 	float Pitch;
 	float Yaw;
 	float Roll;
 
+	/**
+	 * @brief Converts this Rotator to a Quaternion.
+	 * Implemented after FQuat to resolve circular dependency.
+	 */
 	FQuat Quaternion() const;
 
-	static  float ClampAxis(float Angle)
+	/**
+	 * @brief Clamps an angle to the range [0, 360).
+	 * @param Angle The input angle in degrees.
+	 * @return The clamped angle.
+	 */
+	static float ClampAxis(float Angle)
 	{
-		// returns Angle in the range (-360,360)
+		// returns Angle in the range [0,360) by using Fmod and adjusting for negative results.
 		Angle = UE_Fmod(Angle, 360.f);
 
 		if (Angle < 0.f)
 		{
-			// shift to [0,360) range
+			// Shift to [0,360) range if negative
 			Angle += 360.f;
 		}
 
 		return Angle;
 	}
 
+	/**
+	 * @brief Normalizes an angle to the range (-180, 180].
+	 * @param Angle The input angle in degrees.
+	 * @return The normalized angle.
+	 */
 	static __forceinline float NormalizeAxis(float Angle)
 	{
-		// returns Angle in the range [0,360)
+		// First, clamp to [0,360)
 		Angle = ClampAxis(Angle);
 
 		if (Angle > 180.f)
 		{
-			// shift to (-180,180]
+			// Shift to (-180,180]
 			Angle -= 360.f;
 		}
 
 		return Angle;
 	}
 
-	bool operator==(const FRotator& A)
+	bool operator==(const FRotator& A) const
 	{
 		return Yaw == A.Yaw && Pitch == A.Pitch && Roll == A.Roll;
 	}
 };
 
+/**
+ * @brief Stores information about an aircraft's flight path.
+ * Common in games for battle bus or similar flight mechanics.
+ */
 struct FAircraftFlightInfo
 {
 public:
-	FVector                FlightStartLocation;                               // 0x0(0xC)(Edit, BlueprintVisible, BlueprintReadOnly, NoDestructor, NativeAccessSpecifierPublic)
-	FRotator                              FlightStartRotation;                               // 0xC(0xC)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, NativeAccessSpecifierPublic)
-	float                                        FlightSpeed;                                       // 0x18(0x4)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	float                                        TimeTillFlightEnd;                                 // 0x1C(0x4)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	float                                        TimeTillDropStart;                                 // 0x20(0x4)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
-	float                                        TimeTillDropEnd;                                   // 0x24(0x4)(Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	FVector                 FlightStartLocation;    // (Edit, BlueprintVisible, BlueprintReadOnly, NoDestructor, NativeAccessSpecifierPublic)
+	FRotator                FlightStartRotation;    // (Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, NativeAccessSpecifierPublic)
+	float                   FlightSpeed;            // (Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	float                   TimeTillFlightEnd;      // (Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	float                   TimeTillDropStart;      // (Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
+	float                   TimeTillDropEnd;        // (Edit, BlueprintVisible, BlueprintReadOnly, ZeroConstructor, IsPlainOldData, NoDestructor, HasGetValueTypeHash, NativeAccessSpecifierPublic)
 };
 
+/**
+ * @brief Represents a localized text string, often used in UI.
+ * This is a minimal representation, as Unreal's FText is complex.
+ */
 struct FText
 {
-	char UnknownData[0x18];
+	char UnknownData[0x18]; // Placeholder for internal FText data.
 };
 
+/**
+ * @brief Defines the rarity levels for items in Fortnite (C2 refers to Chapter 2).
+ */
 enum class EFortRarityC2 : uint8_t // C2
 {
 	Common = 0,
@@ -294,6 +382,9 @@ enum class EFortRarityC2 : uint8_t // C2
 	EFortRarity_MAX = 9,
 };
 
+/**
+ * @brief Enumerates the different states of the safe zone (storm) in a game.
+ */
 enum class EFortSafeZoneState : uint8_t
 {
 	None = 0,
@@ -303,19 +394,30 @@ enum class EFortSafeZoneState : uint8_t
 	EFortSafeZoneState_MAX = 4,
 };
 
+/**
+ * @brief Defines extrapolation modes for rich curves (e.g., animation curves).
+ */
 enum ERichCurveExtrapolation
 {
-	RCCE_Cycle,
-	RCCE_CycleWithOffset,
-	RCCE_Oscillate,
-	RCCE_Linear,
-	RCCE_Constant,
-	RCCE_None,
+	RCCE_Cycle,           // Cycle the curve data.
+	RCCE_CycleWithOffset, // Cycle with an offset.
+	RCCE_Oscillate,       // Oscillate the curve data.
+	RCCE_Linear,          // Linear extrapolation.
+	RCCE_Constant,        // Constant value extrapolation.
+	RCCE_None,            // No extrapolation.
 };
 
+/**
+ * @brief Enumerates various property types in the Unreal Engine reflection system.
+ * This enum maps to internal engine type IDs.
+ */
 enum EName
 {
-	// pragma = (push_macro("TRUE")) pragma(push_macro("FALSE")) None = 0,
+	// NOTE: The original file had a `#pragma` here which is not standard C++ syntax
+	// and likely a remnant or a specific compiler extension that should be removed
+	// if not part of a larger build system.
+	// Removed: pragma = (push_macro("TRUE")) pragma(push_macro("FALSE"))
+	None = 0,
 	ByteProperty = 1,
 	IntProperty = 2,
 	BoolProperty = 3,
@@ -356,9 +458,9 @@ enum EName
 	IntRect = 55,
 	IntPoint = 56,
 	Vector4 = 57,
-	Name = 58,
-	Vector = 59,
-	Rotator = 60,
+	Name = 58, // This 'Name' refers to FName
+	Vector = 59, // This 'Vector' refers to FVector
+	Rotator = 60, // This 'Rotator' refers to FRotator
 	SHVector = 61,
 	Color = 62,
 	Plane = 63,
@@ -367,9 +469,9 @@ enum EName
 	AdvanceFrame = 66,
 	Pointer = 67,
 	Double = 68,
-	Quat = 69,
+	Quat = 69, // This 'Quat' refers to FQuat
 	Self = 70,
-	Transform = 71,
+	Transform = 71, // This 'Transform' refers to FTransform
 	Vector3f = 72,
 	Vector3d = 73,
 	Plane4f = 74,
@@ -403,8 +505,8 @@ enum EName
 	Function = 107,
 	Pawn = 108,
 	State = 200,
-	TRue = 201,
-	FAlse = 202,
+	TRue = 201, // Typo in original (TRue instead of True)
+	FAlse = 202, // Typo in original (FAlse instead of False)
 	Enum = 203,
 	Default = 204,
 	Skip = 205,
@@ -513,21 +615,24 @@ enum EName
 	Filename = 700,
 	Lerp = 701,
 	Root = 702,
-	// pragma = (pop_macro("TRUE")) pragma(pop_macro("FALSE")) # 18 "D:/DocSource/Engine/Source/Runtime/Core/Public/UObject/UnrealNames.h" 2 MaxHardcodedNameIndex,
+	// Removed: pragma = (pop_macro("TRUE")) pragma(pop_macro("FALSE"))
+	MaxHardcodedNameIndex, // Sentinel value for the maximum hardcoded name index.
 };
 
+/**
+ * @brief Defines interpolation modes for rich curves.
+ */
 enum ERichCurveInterpMode
 {
-	/** Use linear interpolation between values. */
-	RCIM_Linear,
-	/** Use a constant value. Represents stepped values. */
-	RCIM_Constant,
-	/** Cubic interpolation. See TangentMode for different cubic interpolation options. */
-	RCIM_Cubic,
-	/** No interpolation. */
-	RCIM_None
+	RCIM_Linear,   // Use linear interpolation between values.
+	RCIM_Constant, // Use a constant value. Represents stepped values.
+	RCIM_Cubic,    // Cubic interpolation. See TangentMode for different cubic interpolation options.
+	RCIM_None      // No interpolation.
 };
 
+/**
+ * @brief Defines the policy for replicating ability target data.
+ */
 enum class EFortAbilityTargetDataPolicy : uint8_t
 {
 	ReplicateToServer = 0,
@@ -535,15 +640,26 @@ enum class EFortAbilityTargetDataPolicy : uint8_t
 	EFortAbilityTargetDataPolicy_MAX = 2
 };
 
+/**
+ * @brief Writes a given text to a file.
+ * @param Text The string to write.
+ * @param FileName The name of the file. Defaults to "DUMP.txt".
+ */
 void WriteToFile(const std::string& Text, const std::string& FileName = "DUMP.txt")
 {
+	// Open the file in output mode and append mode.
 	std::ofstream stream(FileName, std::ios::out | std::ios::app);
 
+	// Write the text followed by a newline character.
 	stream << Text << '\n';
 
+	// Close the file stream.
 	stream.close();
 }
 
+/**
+ * @brief Defines how a montage section should be chosen for playback.
+ */
 enum class EFortGameplayAbilityMontageSectionToPlay : uint8_t
 {
 	FirstSection = 0,
@@ -552,13 +668,15 @@ enum class EFortGameplayAbilityMontageSectionToPlay : uint8_t
 	EFortGameplayAbilityMontageSectionToPlay_MAX = 3
 };
 
-#define FASTASIN_HALF_PI (1.5707963050f)
+// Constant for FASTASIN_HALF_PI, defined before use.
+#define FASTASIN_HALF_PI (1.5707963050f) // Approximately PI / 2
+
 /**
-* Computes the ASin of a scalar value.
-*
-* @param Value  input angle
-* @return ASin of Value
-*/
+ * @brief Computes the ASin (arcsine) of a scalar value using a minimax approximation.
+ * Optimized for performance.
+ * @param Value The input value, clamped to [-1,1].
+ * @return The ASin of Value in radians.
+ */
 static float FastAsin(float Value)
 {
 	// Clamp input to [-1,1].
@@ -567,23 +685,32 @@ static float FastAsin(float Value)
 	float omx = 1.0f - x;
 	if (omx < 0.0f)
 	{
-		omx = 0.0f;
+		omx = 0.0f; // Ensure omx is non-negative
 	}
 	float root = sqrtf(omx);
-	// 7-degree minimax approximation
+
+	// 7-degree minimax approximation for acos(|x|)
 	float result = ((((((-0.0012624911f * x + 0.0066700901f) * x - 0.0170881256f) * x + 0.0308918810f) * x - 0.0501743046f) * x + 0.0889789874f) * x - 0.2145988016f) * x + FASTASIN_HALF_PI;
 	result *= root;  // acos(|x|)
-	// acos(x) = pi - acos(-x) when x < 0, asin(x) = pi/2 - acos(x)
+
+	// asin(x) = pi/2 - acos(x). Handle sign based on original Value.
 	return (nonnegative ? FASTASIN_HALF_PI - result : result - FASTASIN_HALF_PI);
 }
-#undef FASTASIN_HALF_PI
+#undef FASTASIN_HALF_PI // Undefine the macro after use to prevent potential conflicts.
 
+/**
+ * @brief Custom Atan2 (arctangent of Y/X) function, similar to UE's FMath::Atan2.
+ * Uses a minimax approximation for performance and stability, avoiding potential
+ * NaN issues with standard library atan2f on some platforms/compilers.
+ * @param Y The Y component.
+ * @param X The X component.
+ * @return The angle in radians between the positive X-axis and the point (X, Y).
+ */
 float UE_Atan2(float Y, float X)
 {
-	//return atan2f(Y,X);
+	// On PC this has been measured to be 2x faster than the std C version.
 	// atan2f occasionally returns NaN with perfectly valid input (possibly due to a compiler or library bug).
 	// We are replacing it with a minimax approximation with a max relative error of 7.15255737e-007 compared to the C library function.
-	// On PC this has been measured to be 2x faster than the std C version.
 
 	const float absX = fabsf(X);
 	const float absY = fabsf(Y);
@@ -592,11 +719,12 @@ float UE_Atan2(float Y, float X)
 	float t1 = yAbsBigger ? absX : absY; // Min(absX, absY)
 
 	if (t0 == 0.f)
-		return 0.f;
+		return 0.f; // Avoid division by zero
 
 	float t3 = t1 / t0;
 	float t4 = t3 * t3;
 
+	// Coefficients for the minimap approximation
 	static const float c[7] = {
 		+7.2128853633444123e-03f,
 		-3.5059680836411644e-02f,
@@ -607,6 +735,7 @@ float UE_Atan2(float Y, float X)
 		+1.0f
 	};
 
+	// Evaluate the polynomial approximation
 	t0 = c[0];
 	t0 = t0 * t4 + c[1];
 	t0 = t0 * t4 + c[2];
@@ -616,54 +745,66 @@ float UE_Atan2(float Y, float X)
 	t0 = t0 * t4 + c[6];
 	t3 = t0 * t3;
 
-	t3 = yAbsBigger ? (0.5f * M_PI) - t3 : t3;
-	t3 = (X < 0.0f) ? M_PI - t3 : t3;
+	// Adjust for quadrants
+	t3 = yAbsBigger ? (0.5f * static_cast<float>(M_PI)) - t3 : t3;
+	t3 = (X < 0.0f) ? static_cast<float>(M_PI) - t3 : t3;
 	t3 = (Y < 0.0f) ? -t3 : t3;
 
 	return t3;
 }
 
-// alignas(16)
+/**
+ * @brief Represents a quaternion for rotations.
+ * Mimics Unreal Engine's FQuat structure.
+ */
+// alignas(16) // This might be desired for performance on some architectures, but often not necessary for simple structs.
 struct FQuat
 {
-	float W;
-	float X;
-	float Y;
-	float Z;
+	float W; // Scalar component (real part)
+	float X; // Vector component X (i)
+	float Y; // Vector component Y (j)
+	float Z; // Vector component Z (k)
 
+	/**
+	 * @brief Converts this Quaternion to an FRotator (Euler angles).
+	 * Mimics Unreal Engine's FQuat::Rotator.
+	 * @return An FRotator representing the same rotation.
+	 */
 	FRotator Rotator() const
 	{
-		// DiagnosticCheckNaN();
-		const float SingularityTest = Z * X - W * Y;
+		// DiagnosticCheckNaN(); // Original UE comment, indicating NaN checks.
+		const float SingularityTest = Z * X - W * Y; // Test for gimbal lock singularities.
 		const float YawY = 2.f * (W * Z + X * Y);
 		const float YawX = (1.f - 2.f * ((Y * Y) + (Z * Z)));
 
-		// reference 
+		// References for quaternion to Euler conversion:
 		// http://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 		// http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/
 
-		// this value was found from experience, the above websites recommend different values
-		// but that isn't the case for us, so I went through different testing, and finally found the case 
-		// where both of world lives happily.
-
+		// This threshold value was found from experience to work well with Unreal Engine's coordinate system.
 		const float SINGULARITY_THRESHOLD = 0.4999995f;
-		const float RAD_TO_DEG = (180.f) / M_PI;
-		FRotator RotatorFromQuat = FRotator();
+		const float RAD_TO_DEG = (180.f) / static_cast<float>(M_PI);
+		FRotator RotatorFromQuat;
 
 		if (SingularityTest < -SINGULARITY_THRESHOLD)
 		{
+			// Gimbal lock: Pitch is -90 degrees (looking straight down)
 			RotatorFromQuat.Pitch = -90.f;
 			RotatorFromQuat.Yaw = UE_Atan2(YawY, YawX) * RAD_TO_DEG;
+			// Roll calculation for this singularity case
 			RotatorFromQuat.Roll = FRotator::NormalizeAxis(-RotatorFromQuat.Yaw - (2.f * UE_Atan2(X, W) * RAD_TO_DEG));
 		}
 		else if (SingularityTest > SINGULARITY_THRESHOLD)
 		{
+			// Gimbal lock: Pitch is +90 degrees (looking straight up)
 			RotatorFromQuat.Pitch = 90.f;
 			RotatorFromQuat.Yaw = UE_Atan2(YawY, YawX) * RAD_TO_DEG;
+			// Roll calculation for this singularity case
 			RotatorFromQuat.Roll = FRotator::NormalizeAxis(RotatorFromQuat.Yaw - (2.f * UE_Atan2(X, W) * RAD_TO_DEG));
 		}
 		else
 		{
+			// Standard case: No gimbal lock
 			RotatorFromQuat.Pitch = FastAsin(2.f * (SingularityTest)) * RAD_TO_DEG;
 			RotatorFromQuat.Yaw = UE_Atan2(YawY, YawX) * RAD_TO_DEG;
 			RotatorFromQuat.Roll = UE_Atan2(-2.f * (W * X + Y * Z), (1.f - 2.f * ((X * X) + (Y * Y)))) * RAD_TO_DEG;
@@ -673,12 +814,21 @@ struct FQuat
 	}
 };
 
+/**
+ * @brief Implementation of FRotator::Quaternion().
+ * Converts this Rotator to a Quaternion.
+ * Mimics Unreal Engine's FRotator::Quaternion.
+ * @return An FQuat representing the same rotation.
+ */
 FQuat FRotator::Quaternion() const
 {
-	const float DEG_TO_RAD = M_PI / (180.f);
+	const float DEG_TO_RAD = static_cast<float>(M_PI) / (180.f);
 	const float RADS_DIVIDED_BY_2 = DEG_TO_RAD / 2.f;
-	float SP, SY, SR;
-	float CP, CY, CR;
+
+	// Calculate sin and cos of half angles for Pitch, Yaw, Roll.
+	// fmod is used to handle angles outside [0, 360) for robust calculation.
+	float SP, SY, SR; // Sin of Pitch, Yaw, Roll (half angles)
+	float CP, CY, CR; // Cos of Pitch, Yaw, Roll (half angles)
 
 	const float PitchNoWinding = fmod(Pitch, 360.0f);
 	const float YawNoWinding = fmod(Yaw, 360.0f);
@@ -697,57 +847,90 @@ FQuat FRotator::Quaternion() const
 	return RotationQuat;
 }
 
+/**
+ * @brief Enumerates different resource types in Fortnite.
+ */
 enum class EFortResourceType : uint8_t
 {
 	Wood = 0,
 	Stone = 1,
 	Metal = 2,
-	Permanite = 3,
+	Permanite = 3, // A special resource type
 	None = 4,
 	EFortResourceType_MAX = 5
 };
 
-struct FTransform // https://github.com/EpicGames/UnrealEngine/blob/c3caf7b6bf12ae4c8e09b606f10a09776b4d1f38/Engine/Source/Runtime/Core/Public/Math/TransformNonVectorized.h#L28
+/**
+ * @brief Represents a transformation (rotation, translation, scale) in 3D space.
+ * Mimics Unreal Engine's FTransform structure.
+ */
+struct FTransform
 {
 	FQuat Rotation;
 	FVector Translation;
-	char pad_1C[0x4]; // Padding never changes
-	FVector Scale3D = FVector{ 1, 1, 1 };
-	char pad_2C[0x4];
+	char pad_1C[0x4]; // Padding to maintain memory alignment/layout as in UE
+	FVector Scale3D = FVector{ 1.0f, 1.0f, 1.0f }; // Default scale is (1,1,1)
+	char pad_2C[0x4]; // Padding
 
-	/* bool ContainsNaN() const
+	/*
+	* @brief Checks if any component of the transform contains NaN values.
+	* This function was commented out in the original. Uncomment and implement if needed.
+	bool ContainsNaN() const
 	{
 		return (Translation.ContainsNaN() || Rotation.ContainsNaN() || Scale3D.ContainsNaN());
-	} */
+	}
+	*/
 };
 
+/**
+ * @brief Defines methods for handling actor spawning collision.
+ */
 enum ESpawnActorCollisionHandlingMethod
 {
-	Undefined,
-	AlwaysSpawn,
-	AdjustIfPossibleButAlwaysSpawn,
-	AdjustIfPossibleButDontSpawnIfColliding,
-	DontSpawnIfColliding,
+	Undefined,                          // Collision handling method is not defined.
+	AlwaysSpawn,                        // Always spawn, even if colliding.
+	AdjustIfPossibleButAlwaysSpawn,     // Try to adjust if colliding, but always spawn.
+	AdjustIfPossibleButDontSpawnIfColliding, // Try to adjust, but don't spawn if still colliding.
+	DontSpawnIfColliding,               // Don't spawn if colliding at all.
 };
 
+/**
+ * @brief A template struct to treat an enum as a byte.
+ * Commonly used in Unreal Engine for compact enum storage and network replication.
+ * @tparam TEnum The enumeration type.
+ */
 template<class TEnum>
-struct TEnumAsByte // https://github.com/EpicGames/UnrealEngine/blob/4.21/Engine/Source/Runtime/Core/Public/Containers/EnumAsByte.h#L18
+struct TEnumAsByte // Reference: https://github.com/EpicGames/UnrealEngine/blob/4.21/Engine/Source/Runtime/Core/Public/Containers/EnumAsByte.h#L18
 {
 	uint8_t Value;
 
+	// Constructor from enum value
 	TEnumAsByte(TEnum _value)
-		: Value((uint8_t)_value)
+		: Value(static_cast<uint8_t>(_value))
 	{
 	}
 
+	// Default constructor initializes to 0
 	TEnumAsByte() : Value(0) {}
 
-	TEnum Get()
+	// Explicit conversion operator to the enum type
+	operator TEnum() const
 	{
-		return (TEnum)Value;
+		return static_cast<TEnum>(Value);
+	}
+
+	// Getter for the enum value
+	TEnum Get() const
+	{
+		return static_cast<TEnum>(Value);
 	}
 };
 
+/**
+ * @brief A generic bitfield structure, likely used for flags or packed booleans.
+ * The original naming 'idk' (I don't know) suggests its specific purpose is unknown
+ * without further context from the original codebase.
+ */
 struct bitfield
 {
 	uint8_t idk1;
@@ -758,9 +941,11 @@ struct bitfield
 	uint8_t idk6;
 	uint8_t idk7;
 	uint8_t idk8;
-
 };
 
+/**
+ * @brief Enumerates different types of vehicles.
+ */
 enum class EVehicleType
 {
 	Biplane,
@@ -773,6 +958,9 @@ enum class EVehicleType
 	Unknown
 };
 
+/**
+ * @brief Defines types of interactions in the game.
+ */
 enum class ETInteractionType : uint8_t
 {
 	IT_NoInteraction = 0,
@@ -784,6 +972,9 @@ enum class ETInteractionType : uint8_t
 	IT_MAX = 6
 };
 
+/**
+ * @brief Enumerates custom body types for characters.
+ */
 enum class EFortCustomBodyType : uint8_t
 {
 	Small = 0,
@@ -797,7 +988,9 @@ enum class EFortCustomBodyType : uint8_t
 	EFortCustomBodyType_MAX = 8
 };
 
-// Enum FortniteGame.EFortCustomGender
+/**
+ * @brief Enumerates custom gender types for characters.
+ */
 enum class EFortCustomGender : uint8_t
 {
 	Invalid = 0,
@@ -807,125 +1000,138 @@ enum class EFortCustomGender : uint8_t
 	EFortCustomGender_MAX = 4
 };
 
-#pragma once
+/**
+ * @brief Defines flags for UProperty in Unreal Engine, indicating its behavior and editor visibility.
+ * These flags are crucial for reflection and serialization in Unreal Engine.
+ */
 enum EPropertyFlags : unsigned __int64
 {
 	CPF_None = 0,
-
 	CPF_Edit = 0x0000000000000001,	///< Property is user-settable in the editor.
-	CPF_ConstParm = 0x0000000000000002,	///< This is a constant function parameter
-	CPF_BlueprintVisible = 0x0000000000000004,	///< This property can be read by blueprint code
+	CPF_ConstParm = 0x0000000000000002,	///< This is a constant function parameter.
+	CPF_BlueprintVisible = 0x0000000000000004,	///< This property can be read by blueprint code.
 	CPF_ExportObject = 0x0000000000000008,	///< Object can be exported with actor.
-	CPF_BlueprintReadOnly = 0x0000000000000010,	///< This property cannot be modified by blueprint code
+	CPF_BlueprintReadOnly = 0x0000000000000010,	///< This property cannot be modified by blueprint code.
 	CPF_Net = 0x0000000000000020,	///< Property is relevant to network replication.
 	CPF_EditFixedSize = 0x0000000000000040,	///< Indicates that elements of an array can be modified, but its size cannot be changed.
 	CPF_Parm = 0x0000000000000080,	///< Function/When call parameter.
 	CPF_OutParm = 0x0000000000000100,	///< Value is copied out after function call.
-	CPF_ZeroConstructor = 0x0000000000000200,	///< memset is fine for construction
+	CPF_ZeroConstructor = 0x0000000000000200,	///< memset is fine for construction.
 	CPF_ReturnParm = 0x0000000000000400,	///< Return value.
-	CPF_DisableEditOnTemplate = 0x0000000000000800,	///< Disable editing of this property on an archetype/sub-blueprint
-	//CPF_      						= 0x0000000000001000,	///< 
+	CPF_DisableEditOnTemplate = 0x0000000000000800,	///< Disable editing of this property on an archetype/sub-blueprint.
+	// 0x0000000000001000 - Unused
 	CPF_Transient = 0x0000000000002000,	///< Property is transient: shouldn't be saved or loaded, except for Blueprint CDOs.
 	CPF_Config = 0x0000000000004000,	///< Property should be loaded/saved as permanent profile.
-	//CPF_								= 0x0000000000008000,	///< 
-	CPF_DisableEditOnInstance = 0x0000000000010000,	///< Disable editing on an instance of this class
+	// 0x0000000000008000 - Unused
+	CPF_DisableEditOnInstance = 0x0000000000010000,	///< Disable editing on an instance of this class.
 	CPF_EditConst = 0x0000000000020000,	///< Property is uneditable in the editor.
 	CPF_GlobalConfig = 0x0000000000040000,	///< Load config from base class, not subclass.
 	CPF_InstancedReference = 0x0000000000080000,	///< Property is a component references.
-	//CPF_								= 0x0000000000100000,	///<
-	CPF_DuplicateTransient = 0x0000000000200000,	///< Property should always be reset to the default value during any type of duplication (copy/paste, binary duplication, etc.)
-	//CPF_								= 0x0000000000400000,	///< 
-	//CPF_    							= 0x0000000000800000,	///< 
-	CPF_SaveGame = 0x0000000001000000,	///< Property should be serialized for save games, this is only checked for game-specific archives with ArIsSaveGame
+	// 0x0000000000100000 - Unused
+	CPF_DuplicateTransient = 0x0000000000200000,	///< Property should always be reset to the default value during any type of duplication (copy/paste, binary duplication, etc.).
+	// 0x0000000000400000 - Unused
+	// 0x0000000000800000 - Unused
+	CPF_SaveGame = 0x0000000001000000,	///< Property should be serialized for save games, this is only checked for game-specific archives with ArIsSaveGame.
 	CPF_NoClear = 0x0000000002000000,	///< Hide clear (and browse) button.
-	//CPF_  							= 0x0000000004000000,	///<
-	CPF_ReferenceParm = 0x0000000008000000,	///< Value is passed by reference; CPF_OutParam and CPF_Param should also be set.
-	CPF_BlueprintAssignable = 0x0000000010000000,	///< MC Delegates only.  Property should be exposed for assigning in blueprint code
-	CPF_Deprecated = 0x0000000020000000,	///< Property is deprecated.  Read it from an archive, but don't save it.
-	CPF_IsPlainOldData = 0x0000000040000000,	///< If this is set, then the property can be memcopied instead of CopyCompleteValue / CopySingleValue
-	CPF_RepSkip = 0x0000000080000000,	///< Not replicated. For non replicated properties in replicated structs 
-	CPF_RepNotify = 0x0000000100000000,	///< Notify actors when a property is replicated
-	CPF_Interp = 0x0000000200000000,	///< interpolatable property for use with matinee
-	CPF_NonTransactional = 0x0000000400000000,	///< Property isn't transacted
-	CPF_EditorOnly = 0x0000000800000000,	///< Property should only be loaded in the editor
-	CPF_NoDestructor = 0x0000001000000000,	///< No destructor
-	//CPF_								= 0x0000002000000000,	///<
-	CPF_AutoWeak = 0x0000004000000000,	///< Only used for weak pointers, means the export type is autoweak
+	// 0x0000000004000000 - Unused
+	CPF_ReferenceParm = 0x0000000008000000,	///< Value is passed by reference; CPF_OutParam and CPF_Parm should also be set.
+	CPF_BlueprintAssignable = 0x0000000010000000,	///< MC Delegates only. Property should be exposed for assigning in blueprint code.
+	CPF_Deprecated = 0x0000000020000000,	///< Property is deprecated. Read it from an archive, but don't save it.
+	CPF_IsPlainOldData = 0x0000000040000000,	///< If this is set, then the property can be memcopied instead of CopyCompleteValue / CopySingleValue.
+	CPF_RepSkip = 0x0000000080000000,	///< Not replicated. For non-replicated properties in replicated structs.
+	CPF_RepNotify = 0x0000000100000000,	///< Notify actors when a property is replicated.
+	CPF_Interp = 0x0000000200000000,	///< Interpolatable property for use with matinee (animation sequences).
+	CPF_NonTransactional = 0x0000000400000000,	///< Property isn't transacted (undo/redo).
+	CPF_EditorOnly = 0x0000000800000000,	///< Property should only be loaded in the editor.
+	CPF_NoDestructor = 0x0000001000000000,	///< No destructor.
+	// 0x0000002000000000 - Unused
+	CPF_AutoWeak = 0x0000004000000000,	///< Only used for weak pointers, means the export type is autoweak.
 	CPF_ContainsInstancedReference = 0x0000008000000000,	///< Property contains component references.
-	CPF_AssetRegistrySearchable = 0x0000010000000000,	///< asset instances will add properties with this flag to the asset registry automatically
-	CPF_SimpleDisplay = 0x0000020000000000,	///< The property is visible by default in the editor details view
-	CPF_AdvancedDisplay = 0x0000040000000000,	///< The property is advanced and not visible by default in the editor details view
-	CPF_Protected = 0x0000080000000000,	///< property is protected from the perspective of script
-	CPF_BlueprintCallable = 0x0000100000000000,	///< MC Delegates only.  Property should be exposed for calling in blueprint code
-	CPF_BlueprintAuthorityOnly = 0x0000200000000000,	///< MC Delegates only.  This delegate accepts (only in blueprint) only events with BlueprintAuthorityOnly.
-	CPF_TextExportTransient = 0x0000400000000000,	///< Property shouldn't be exported to text format (e.g. copy/paste)
-	CPF_NonPIEDuplicateTransient = 0x0000800000000000,	///< Property should only be copied in PIE
-	CPF_ExposeOnSpawn = 0x0001000000000000,	///< Property is exposed on spawn
-	CPF_PersistentInstance = 0x0002000000000000,	///< A object referenced by the property is duplicated like a component. (Each actor should have an own instance.)
-	CPF_UObjectWrapper = 0x0004000000000000,	///< Property was parsed as a wrapper class like TSubclassOf<T>, FScriptInterface etc., rather than a USomething*
+	CPF_AssetRegistrySearchable = 0x0000010000000000,	///< Asset instances will add properties with this flag to the asset registry automatically.
+	CPF_SimpleDisplay = 0x0000020000000000,	///< The property is visible by default in the editor details view.
+	CPF_AdvancedDisplay = 0x0000040000000000,	///< The property is advanced and not visible by default in the editor details view.
+	CPF_Protected = 0x0000080000000000,	///< Property is protected from the perspective of script.
+	CPF_BlueprintCallable = 0x0000100000000000,	///< MC Delegates only. Property should be exposed for calling in blueprint code.
+	CPF_BlueprintAuthorityOnly = 0x0000200000000000,	///< MC Delegates only. This delegate accepts (only in blueprint) only events with BlueprintAuthorityOnly.
+	CPF_TextExportTransient = 0x0000400000000000,	///< Property shouldn't be exported to text format (e.g. copy/paste).
+	CPF_NonPIEDuplicateTransient = 0x0000800000000000,	///< Property should only be copied in PIE (Play In Editor).
+	CPF_ExposeOnSpawn = 0x0001000000000000,	///< Property is exposed on spawn.
+	CPF_PersistentInstance = 0x0002000000000000,	///< An object referenced by the property is duplicated like a component. (Each actor should have its own instance.)
+	CPF_UObjectWrapper = 0x0004000000000000,	///< Property was parsed as a wrapper class like TSubclassOf<T>, FScriptInterface etc., rather than a USomething*.
 	CPF_HasGetValueTypeHash = 0x0008000000000000,	///< This property can generate a meaningful hash value.
-	CPF_NativeAccessSpecifierPublic = 0x0010000000000000,	///< Public native access specifier
-	CPF_NativeAccessSpecifierProtected = 0x0020000000000000,	///< Protected native access specifier
-	CPF_NativeAccessSpecifierPrivate = 0x0040000000000000,	///< Private native access specifier
-	CPF_SkipSerialization = 0x0080000000000000,	///< Property shouldn't be serialized, can still be exported to text
+	CPF_NativeAccessSpecifierPublic = 0x0010000000000000,	///< Public native access specifier.
+	CPF_NativeAccessSpecifierProtected = 0x0020000000000000,	///< Protected native access specifier.
+	CPF_NativeAccessSpecifierPrivate = 0x0040000000000000,	///< Private native access specifier.
+	CPF_SkipSerialization = 0x0080000000000000,	///< Property shouldn't be serialized, can still be exported to text.
 };
 
+/**
+ * @brief Defines conditions for network replication lifetime.
+ * Determines when a property or object should be replicated to clients.
+ */
 enum ELifetimeCondition
 {
-	COND_None = 0,
-	COND_InitialOnly = 1,
-	COND_OwnerOnly = 2,
-	COND_SkipOwner = 3,
-	COND_SimulatedOnly = 4,
-	COND_AutonomousOnly = 5,
-	COND_SimulatedOrPhysics = 6,
-	COND_InitialOrOwner = 7,
-	COND_Custom = 8,
-	COND_ReplayOrOwner = 9,
-	COND_ReplayOnly = 10,
-	COND_SimulatedOnlyNoReplay = 11,
-	COND_SimulatedOrPhysicsNoReplay = 12,
-	COND_SkipReplay = 13,
-	COND_Never = 15,
-	COND_Max = 16
+	COND_None = 0,                // Always relevant.
+	COND_InitialOnly = 1,         // Only relevant for the initial replication.
+	COND_OwnerOnly = 2,           // Only relevant to the owning client.
+	COND_SkipOwner = 3,           // Relevant to all clients except the owning client.
+	COND_SimulatedOnly = 4,       // Only relevant to simulated proxies.
+	COND_AutonomousOnly = 5,      // Only relevant to autonomous proxies.
+	COND_SimulatedOrPhysics = 6,  // Relevant to simulated proxies or objects with physics.
+	COND_InitialOrOwner = 7,      // Relevant for initial replication or to the owning client.
+	COND_Custom = 8,              // Custom replication logic.
+	COND_ReplayOrOwner = 9,       // Relevant for replays or to the owning client.
+	COND_ReplayOnly = 10,         // Only relevant for replays.
+	COND_SimulatedOnlyNoReplay = 11, // Simulated only, but skip in replay.
+	COND_SimulatedOrPhysicsNoReplay = 12, // Simulated or physics, but skip in replay.
+	COND_SkipReplay = 13,         // Skip in replay.
+	COND_Never = 15,              // Never relevant.
+	COND_Max = 16                 // Maximum enum value.
 };
 
+/**
+ * @brief Defines flags for UFunction in Unreal Engine, indicating its behavior and type.
+ * These flags determine how a function is called, replicated, and exposed.
+ */
 enum EFunctionFlags
 {
 	FUNC_None = 0x00000000,
-	FUNC_Final = 0x00000001,
-	FUNC_RequiredAPI = 0x00000002,
-	FUNC_BlueprintAuthorityOnly = 0x00000004,
-	FUNC_BlueprintCosmetic = 0x00000008,
-	FUNC_Net = 0x00000040,
-	FUNC_NetReliable = 0x00000080,
-	FUNC_NetRequest = 0x00000100,
-	FUNC_Exec = 0x00000200,
-	FUNC_Native = 0x00000400,
-	FUNC_Event = 0x00000800,
-	FUNC_NetResponse = 0x00001000,
-	FUNC_Static = 0x00002000,
-	FUNC_NetMulticast = 0x00004000,
-	FUNC_UbergraphFunction = 0x00008000,
-	FUNC_MulticastDelegate = 0x00010000,
+	FUNC_Final = 0x00000001,           // Function cannot be overridden in derived classes.
+	FUNC_RequiredAPI = 0x00000002,      // Function is part of a required API.
+	FUNC_BlueprintAuthorityOnly = 0x00000004, // Only callable on server/authority in Blueprint.
+	FUNC_BlueprintCosmetic = 0x00000008, // Function is cosmetic only and has no gameplay effect.
+	FUNC_Net = 0x00000040,              // Function is network replicated.
+	FUNC_NetReliable = 0x00000080,      // Function is network replicated reliably.
+	FUNC_NetRequest = 0x00000100,       // Function is a network request (client to server).
+	FUNC_Exec = 0x00000200,             // Function can be executed from console.
+	FUNC_Native = 0x00000400,           // Function is implemented in C++.
+	FUNC_Event = 0x00000800,            // Function is a Blueprint event.
+	FUNC_NetResponse = 0x00001000,      // Function is a network response (server to client).
+	FUNC_Static = 0x00002000,           // Function is static (does not require an object instance).
+	FUNC_NetMulticast = 0x00004000,     // Function is a network multicast event.
+	FUNC_UbergraphFunction = 0x00008000, // Function is part of a Blueprint's ubergraph.
+	FUNC_MulticastDelegate = 0x00010000, // Function is a multicast delegate.
 	FUNC_Public = 0x00020000,
 	FUNC_Private = 0x00040000,
 	FUNC_Protected = 0x00080000,
-	FUNC_Delegate = 0x00100000,
-	FUNC_NetServer = 0x00200000,
-	FUNC_HasOutParms = 0x00400000,
-	FUNC_HasDefaults = 0x00800000,
-	FUNC_NetClient = 0x01000000,
-	FUNC_DLLImport = 0x02000000,
-	FUNC_BlueprintCallable = 0x04000000,
-	FUNC_BlueprintEvent = 0x08000000,
-	FUNC_BlueprintPure = 0x10000000,
-	FUNC_EditorOnly = 0x20000000,
-	FUNC_Const = 0x40000000,
-	FUNC_NetValidate = 0x80000000,
-	FUNC_AllFlags = 0xFFFFFFFF,
+	FUNC_Delegate = 0x00100000,         // Function is a delegate.
+	FUNC_NetServer = 0x00200000,        // Function is only callable on the server.
+	FUNC_HasOutParms = 0x00400000,      // Function has output parameters.
+	FUNC_HasDefaults = 0x00800000,      // Function has default parameter values.
+	FUNC_NetClient = 0x01000000,        // Function is only callable on the client.
+	FUNC_DLLImport = 0x02000000,        // Function is imported from a DLL.
+	FUNC_BlueprintCallable = 0x04000000, // Function is callable from Blueprint.
+	FUNC_BlueprintEvent = 0x08000000,   // Function is a Blueprint event.
+	FUNC_BlueprintPure = 0x10000000,    // Function is a Blueprint pure function (no side effects).
+	FUNC_EditorOnly = 0x20000000,       // Function is only available in the editor.
+	FUNC_Const = 0x40000000,            // Function does not modify the object's state.
+	FUNC_NetValidate = 0x80000000,      // Function performs network validation.
+	FUNC_AllFlags = 0xFFFFFFFF,         // All possible function flags.
 };
 
+/**
+ * @brief Enumerates different types of gliders.
+ */
 enum class EFortGliderType : uint8_t
 {
 	Glider = 0,
@@ -933,77 +1139,89 @@ enum class EFortGliderType : uint8_t
 	EFortGliderType_MAX = 2,
 };
 
+/**
+ * @brief Defines flags for UObject in Unreal Engine.
+ * These flags control object lifecycle, serialization, and garbage collection.
+ */
 enum EObjectFlags
 {
-	RF_NoFlags = 0x00000000,
-	RF_Public = 0x00000001,
-	RF_Standalone = 0x00000002,
-	RF_MarkAsNative = 0x00000004,
-	RF_Transactional = 0x00000008,
-	RF_ClassDefaultObject = 0x00000010,
-	RF_ArchetypeObject = 0x00000020,
-	RF_Transient = 0x00000040,
-	RF_MarkAsRootSet = 0x00000080,
-	RF_TagGarbageTemp = 0x00000100,
-	RF_NeedInitialization = 0x00000200,
-	RF_NeedLoad = 0x00000400,
-	RF_KeepForCooker = 0x00000800,
-	RF_NeedPostLoad = 0x00001000,
-	RF_NeedPostLoadSubobjects = 0x00002000,
-	RF_NewerVersionExists = 0x00004000,
-	RF_BeginDestroyed = 0x00008000,
-	RF_FinishDestroyed = 0x00010000,
-	RF_BeingRegenerated = 0x00020000,
-	RF_DefaultSubObject = 0x00040000,
-	RF_WasLoaded = 0x00080000,
-	RF_TextExportTransient = 0x00100000,
-	RF_LoadCompleted = 0x00200000,
-	RF_InheritableComponentTemplate = 0x00400000,
-	RF_DuplicateTransient = 0x00800000,
-	RF_StrongRefOnFrame = 0x01000000,
-	RF_NonPIEDuplicateTransient = 0x02000000,
-	RF_Dynamic = 0x04000000,
-	RF_WillBeLoaded = 0x08000000,
-	RF_HasExternalPackage = 0x10000000,
+	RF_NoFlags = 0x00000000,            // No flags set.
+	RF_Public = 0x00000001,             // Object is public.
+	RF_Standalone = 0x00000002,         // Object can exist without a package.
+	RF_MarkAsNative = 0x00000004,       // Mark as native class.
+	RF_Transactional = 0x00000008,      // Object supports transactions (undo/redo).
+	RF_ClassDefaultObject = 0x00000010, // Object is a class default object (CDO).
+	RF_ArchetypeObject = 0x00000020,    // Object is an archetype.
+	RF_Transient = 0x00000040,          // Object is not saved to disk.
+	RF_MarkAsRootSet = 0x00000080,      // Object is part of the root set (not garbage collected).
+	RF_TagGarbageTemp = 0x00000100,     // Temporary flag for garbage collection.
+	RF_NeedInitialization = 0x00000200, // Object needs initialization.
+	RF_NeedLoad = 0x00000400,           // Object needs to be loaded.
+	RF_KeepForCooker = 0x00000800,      // Keep object for cooking process.
+	RF_NeedPostLoad = 0x00001000,       // Object needs PostLoad called.
+	RF_NeedPostLoadSubobjects = 0x00002000, // Object needs PostLoadSubobjects called.
+	RF_NewerVersionExists = 0x00004000, // A newer version of this object exists.
+	RF_BeginDestroyed = 0x00008000,     // Object is beginning destruction.
+	RF_FinishDestroyed = 0x00010000,    // Object has finished destruction.
+	RF_BeingRegenerated = 0x00020000,   // Object is being regenerated.
+	RF_DefaultSubObject = 0x00040000,   // Object is a default sub-object.
+	RF_WasLoaded = 0x00080000,          // Object was loaded from disk.
+	RF_TextExportTransient = 0x00100000, // Object should not be text exported.
+	RF_LoadCompleted = 0x00200000,      // Object has completed loading.
+	RF_InheritableComponentTemplate = 0x00400000, // Object is an inheritable component template.
+	RF_DuplicateTransient = 0x00800000, // Object should be reset to default on duplication.
+	RF_StrongRefOnFrame = 0x01000000,   // Strong reference for one frame.
+	RF_NonPIEDuplicateTransient = 0x02000000, // Object should only be copied in PIE.
+	RF_Dynamic = 0x04000000,            // Object is dynamically created.
+	RF_WillBeLoaded = 0x08000000,       // Object will be loaded.
+	RF_HasExternalPackage = 0x10000000, // Object has an external package.
 };
 
+/**
+ * @brief Defines flags for UClass in Unreal Engine.
+ * These flags control class behavior, editor integration, and metadata.
+ */
 enum EClassFlags
 {
-	CLASS_None = 0x00000000u,
-	CLASS_Abstract = 0x00000001u,
-	CLASS_DefaultConfig = 0x00000002u,
-	CLASS_Config = 0x00000004u,
-	CLASS_Transient = 0x00000008u,
-	CLASS_Parsed = 0x00000010u,
-	CLASS_MatchedSerializers = 0x00000020u,
-	CLASS_ProjectUserConfig = 0x00000040u,
-	CLASS_Native = 0x00000080u,
-	CLASS_NoExport = 0x00000100u,
-	CLASS_NotPlaceable = 0x00000200u,
-	CLASS_PerObjectConfig = 0x00000400u,
-	CLASS_ReplicationDataIsSetUp = 0x00000800u,
-	CLASS_EditInlineNew = 0x00001000u,
-	CLASS_CollapseCategories = 0x00002000u,
-	CLASS_Interface = 0x00004000u,
-	CLASS_CustomConstructor = 0x00008000u,
-	CLASS_Const = 0x00010000u,
-	CLASS_LayoutChanging = 0x00020000u,
-	CLASS_CompiledFromBlueprint = 0x00040000u,
-	CLASS_MinimalAPI = 0x00080000u,
-	CLASS_RequiredAPI = 0x00100000u,
-	CLASS_DefaultToInstanced = 0x00200000u,
-	CLASS_TokenStreamAssembled = 0x00400000u,
-	CLASS_HasInstancedReference = 0x00800000u,
-	CLASS_Hidden = 0x01000000u,
-	CLASS_Deprecated = 0x02000000u,
-	CLASS_HideDropDown = 0x04000000u,
-	CLASS_GlobalUserConfig = 0x08000000u,
-	CLASS_Intrinsic = 0x10000000u,
-	CLASS_Constructed = 0x20000000u,
-	CLASS_ConfigDoNotCheckDefaults = 0x40000000u,
-	CLASS_NewerVersionExists = 0x80000000u,
+	CLASS_None = 0x00000000u,           // No flags set.
+	CLASS_Abstract = 0x00000001u,       // Class is abstract, cannot be instantiated.
+	CLASS_DefaultConfig = 0x00000002u,  // Uses default config file.
+	CLASS_Config = 0x00000004u,         // Can be configured.
+	CLASS_Transient = 0x00000008u,      // Class is transient, not saved.
+	CLASS_Parsed = 0x00000010u,         // Class has been parsed.
+	CLASS_MatchedSerializers = 0x00000020u, // Matched serializers.
+	CLASS_ProjectUserConfig = 0x00000040u, // Uses project user config.
+	CLASS_Native = 0x00000080u,         // Class is native (C++).
+	CLASS_NoExport = 0x00000100u,       // Do not export this class.
+	CLASS_NotPlaceable = 0x00000200u,   // Cannot be placed in the editor.
+	CLASS_PerObjectConfig = 0x00000400u, // Per-object config file.
+	CLASS_ReplicationDataIsSetUp = 0x00000800u, // Replication data is set up.
+	CLASS_EditInlineNew = 0x00001000u,  // Allows creation of new objects inline.
+	CLASS_CollapseCategories = 0x00002000u, // Collapse categories in editor.
+	CLASS_Interface = 0x00004000u,      // Class is an interface.
+	CLASS_CustomConstructor = 0x00008000u, // Has a custom constructor.
+	CLASS_Const = 0x00010000u,          // Class is const.
+	CLASS_LayoutChanging = 0x00020000u, // Layout is changing.
+	CLASS_CompiledFromBlueprint = 0x00040000u, // Compiled from Blueprint.
+	CLASS_MinimalAPI = 0x00080000u,     // Minimal API.
+	CLASS_RequiredAPI = 0x00100000u,    // Required API.
+	CLASS_DefaultToInstanced = 0x00200000u, // Default to instanced.
+	CLASS_TokenStreamAssembled = 0x00400000u, // Token stream assembled.
+	CLASS_HasInstancedReference = 0x00800000u, // Has instanced reference.
+	CLASS_Hidden = 0x01000000u,         // Hidden from editor.
+	CLASS_Deprecated = 0x02000000u,     // Deprecated.
+	CLASS_HideDropDown = 0x04000000u,   // Hide drop down in editor.
+	CLASS_GlobalUserConfig = 0x08000000u, // Global user config.
+	CLASS_Intrinsic = 0x10000000u,      // Intrinsic class.
+	CLASS_Constructed = 0x20000000u,    // Constructed.
+	CLASS_ConfigDoNotCheckDefaults = 0x40000000u, // Config does not check defaults.
+	CLASS_NewerVersionExists = 0x80000000u, // Newer version exists.
 };
 
+/**
+ * @brief Defines flags for class casting in Unreal Engine's reflection system.
+ * These flags allow for fast type checking.
+ */
 enum EClassCastFlags
 {
 	CASTCLASS_None = 0x0000000000000000,
@@ -1062,20 +1280,27 @@ enum EClassCastFlags
 	CASTCLASS_FFieldPathProperty = 0x0010000000000000,
 };
 
+/**
+ * @brief Defines network dormancy states for actors.
+ * Dormancy is an optimization to reduce network traffic for actors that are not actively changing.
+ */
 enum class ENetDormancy : uint8_t
 {
-	DORM_Never = 0,
-	DORM_Awake = 1,
-	DORM_DormantAll = 2,
-	DORM_DormantPartial = 3,
-	DORM_Initial = 4,
+	DORM_Never = 0,        // Never goes dormant.
+	DORM_Awake = 1,        // Currently awake and replicating.
+	DORM_DormantAll = 2,   // Fully dormant, no replication.
+	DORM_DormantPartial = 3, // Partially dormant, only critical properties replicate.
+	DORM_Initial = 4,      // Initial dormancy state.
 	DORM_MAX = 5
 };
 
+/**
+ * @brief Enumerates states for a team member, often related to communication or needs.
+ */
 enum class ETeamMemberState : uint8_t
 {
 	None = 0,
-	FIRST_CHAT_MESSAGE = 1,
+	FIRST_CHAT_MESSAGE = 1, // Sentinel for the first chat message related enum.
 	NeedAmmoHeavy = 2,
 	NeedAmmoLight = 3,
 	NeedAmmoMedium = 4,
@@ -1087,27 +1312,39 @@ enum class ETeamMemberState : uint8_t
 	NeedMaterials = 10,
 	NeedShields = 11,
 	NeedWeapon = 12,
-	LAST_CHAT_MESSAGE = 13,
+	LAST_CHAT_MESSAGE = 13, // Sentinel for the last chat message related enum.
 	MAX = 14
 };
 
+/**
+ * @brief Defines types of network channels.
+ */
 enum EChannelType
 {
-	CHTYPE_None = 0,  // Invalid type.
-	CHTYPE_Control = 1,  // Connection control.
-	CHTYPE_Actor = 2,  // Actor-update channel.
-
-	// @todo: Remove and reassign number to CHTYPE_Voice (breaks net compatibility)
-	CHTYPE_File = 3,  // Binary file transfer.
-
-	CHTYPE_Voice = 4,  // VoIP data channel
-	CHTYPE_MAX = 8,  // Maximum.
+	CHTYPE_None = 0,      // Invalid type.
+	CHTYPE_Control = 1,   // Connection control.
+	CHTYPE_Actor = 2,     // Actor-update channel.
+	// @todo: Remove and reassign number to CHTYPE_Voice (breaks net compatibility) - Original comment implies this might change.
+	CHTYPE_File = 3,      // Binary file transfer.
+	CHTYPE_Voice = 4,     // VoIP data channel.
+	CHTYPE_MAX = 8,       // Maximum.
 };
 
+/**
+ * @brief Finds a byte pattern (signature) in memory.
+ * Commonly used for finding function addresses or global variables in executables.
+ * @param signatureStr The byte signature string (e.g., "48 8B EC ?? ?? FF").
+ * @param bRelative If true, calculates a relative address.
+ * @param offset An offset to apply.
+ * @param bIsVar If true, treats the pattern as a variable address.
+ * @return The found memory address, or NULL if not found.
+ */
 static uint64_t FindPattern(std::string signatureStr, bool bRelative = false, uint32_t offset = 0, bool bIsVar = false)
 {
 	auto signature = signatureStr.c_str();
-	auto base_address = (uint64_t)GetModuleHandleW(NULL);
+	auto base_address = reinterpret_cast<uint64_t>(GetModuleHandleW(NULL)); // Get the base address of the current module (executable).
+
+	// Lambda function to convert a pattern string to a vector of bytes (allowing '??' for wildcards).
 	static auto patternToByte = [](const char* pattern)
 	{
 		auto bytes = std::vector<int>{};
@@ -1119,29 +1356,35 @@ static uint64_t FindPattern(std::string signatureStr, bool bRelative = false, ui
 			if (*current == '?')
 			{
 				++current;
-				if (*current == '?') ++current;
-				bytes.push_back(-1);
+				if (*current == '?') ++current; // Handle "??" for a single byte wildcard.
+				bytes.push_back(-1); // -1 represents a wildcard.
 			}
-			else { bytes.push_back(strtoul(current, &current, 16)); }
+			else
+			{
+				bytes.push_back(static_cast<int>(strtoul(current, &current, 16))); // Convert hex string to integer.
+			}
 		}
 		return bytes;
 	};
 
-	const auto dosHeader = (PIMAGE_DOS_HEADER)base_address;
-	const auto ntHeaders = (PIMAGE_NT_HEADERS)((std::uint8_t*)base_address + dosHeader->e_lfanew);
+	const auto dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(base_address);
+	// Calculate the address of the NT headers.
+	const auto ntHeaders = reinterpret_cast<PIMAGE_NT_HEADERS>(reinterpret_cast<std::uint8_t*>(base_address) + dosHeader->e_lfanew);
 
-	const auto sizeOfImage = ntHeaders->OptionalHeader.SizeOfImage;
+	const auto sizeOfImage = ntHeaders->OptionalHeader.SizeOfImage; // Size of the executable image in memory.
 	auto patternBytes = patternToByte(signature);
 	const auto scanBytes = reinterpret_cast<std::uint8_t*>(base_address);
 
 	const auto s = patternBytes.size();
-	const auto d = patternBytes.data();
+	const auto d = patternBytes.data(); // Get raw pointer to the byte data.
 
+	// Iterate through the image memory to find the pattern.
 	for (auto i = 0ul; i < sizeOfImage - s; ++i)
 	{
 		bool found = true;
 		for (auto j = 0ul; j < s; ++j)
 		{
+			// Compare bytes; if d[j] is -1, it's a wildcard and always matches.
 			if (scanBytes[i + j] != d[j] && d[j] != -1)
 			{
 				found = false;
@@ -1150,89 +1393,125 @@ static uint64_t FindPattern(std::string signatureStr, bool bRelative = false, ui
 		}
 		if (found)
 		{
-			auto address = (uint64_t)&scanBytes[i];
+			auto address = reinterpret_cast<uint64_t>(&scanBytes[i]); // Address of the found pattern.
 			if (bIsVar)
+			{
+				// For variables, the address might be relative, requiring an additional offset and dereference.
 				address = (address + offset + *(int*)(address + 3));
+			}
 			if (bRelative && !bIsVar)
+			{
+				// For relative addressing, calculate the target address from the instruction's operand.
 				address = ((address + offset + 4) + *(int*)(address + offset));
+			}
 			return address;
 		}
 	}
-	return NULL;
+	return NULL; // Pattern not found.
 }
 
+/**
+ * @brief Enumerates network roles for actors in a multiplayer game.
+ * Determines ownership and authority over an actor on the network.
+ */
 enum class ENetRole : uint8_t
 {
-	ROLE_None = 0,
-	ROLE_SimulatedProxy = 1,
-	ROLE_AutonomousProxy = 2,
-	ROLE_Authority = 3,
+	ROLE_None = 0,           // No role (e.g., actor not relevant, or destroyed).
+	ROLE_SimulatedProxy = 1, // Client-side representation of an actor whose authoritative instance is on the server or another client.
+	ROLE_AutonomousProxy = 2, // Client-side representation of an actor that this client owns and has authority over (e.g., player character).
+	ROLE_Authority = 3,      // Server-side authoritative instance of an actor.
 	ROLE_MAX = 4
 };
 
 // #define PATTERN_TESTING // Never use this unless you know what this is for
+// This define controls whether the application exits on a failed pattern find.
+// It's commented out by default, meaning the application will exit.
 
+/**
+ * @brief Checks if a pattern was found and optionally assigns it to a delegate pointer.
+ * Displays an error message and exits the application if the pattern is not found,
+ * unless PATTERN_TESTING is defined.
+ * @tparam T The type of the delegate pointer.
+ * @param Name The name of the pattern being searched for (for error messages).
+ * @param Pattern The address found by FindPattern.
+ * @param Delegate A pointer to a variable of type T* to store the found address. Can be nullptr.
+ */
 template <typename T>
 void CheckPattern(const std::string& Name, uint64_t Pattern, T** Delegate)
 {
 	if (!Pattern)
 	{
-		MessageBoxA(0, ("Failed to find: " + Name).c_str(), ("Universal Walking Simulator"), MB_ICONERROR);
+		MessageBoxA(0, ("Failed to find: " + Name).c_str(), "Universal Walking Simulator", MB_ICONERROR);
 #ifndef PATTERN_TESTING
-		FreeLibraryAndExitThread(GetModuleHandle(0), 0);
+		FreeLibraryAndExitThread(GetModuleHandle(0), 0); // Exit the application if pattern not found.
 #endif
 	}
-
 	else
 	{
 		if (Delegate)
-			*Delegate = (T*)(Pattern);
+			*Delegate = reinterpret_cast<T*>(Pattern); // Assign the found address to the delegate pointer.
 	}
 }
 
+// Type alias for EFortTeam, indicating it's an 8-bit unsigned integer.
 using EFortTeam = uint8_t;
 
+/**
+ * @brief Enumerates the main phases of an Athena (Battle Royale) game.
+ */
 enum class EAthenaGamePhase : uint8_t
 {
 	None = 0,
-	Setup = 1,
-	Warmup = 2,
-	Aircraft = 3,
-	SafeZones = 4,
-	EndGame = 5,
-	Count = 6,
+	Setup = 1,      // Initial game setup.
+	Warmup = 2,     // Players are in the lobby/warmup island.
+	Aircraft = 3,   // Players are on the battle bus.
+	SafeZones = 4,  // The storm is active and shrinking.
+	EndGame = 5,    // The game is ending (e.g., winner declared).
+	Count = 6,      // Number of valid game phases.
 	EAthenaGamePhase_MAX = 7
 };
 
+/**
+ * @brief Defines network modes for a game instance.
+ */
 enum ENetMode
 {
-	NM_Standalone,
-	NM_DedicatedServer,
-	NM_ListenServer,
-	NM_Client,
+	NM_Standalone,      // Single-player, no networking.
+	NM_DedicatedServer, // Server only, no local client.
+	NM_ListenServer,    // Server with a local client.
+	NM_Client,          // Client connected to a server.
 	NM_MAX,
 };
 
+/**
+ * @brief Defines types of dynamic foundations for building.
+ */
 enum class EDynamicFoundationType : uint8_t
 {
-	Static = 0,
-	StartEnabled_Stationary = 1,
-	StartEnabled_Dynamic = 2,
-	StartDisabled = 3,
+	Static = 0,               // Stationary and non-moving.
+	StartEnabled_Stationary = 1, // Starts enabled but remains stationary.
+	StartEnabled_Dynamic = 2,    // Starts enabled and can move.
+	StartDisabled = 3,        // Starts disabled.
 	EDynamicFoundationType_MAX = 4
 };
 
-// the nam e changes for EGBuildingFoundtaainon Type the varibles but no size
-
+// The name changes for EBuildingFoundationType and its variables but not size.
+/**
+ * @brief Defines types of building foundations.
+ * Note: The original comment states the name and variables change, but not size.
+ */
 enum class EBuildingFoundationType : uint8_t
 {
-	BFT = 0,
-	BFT01 = 1,
-	BFT02 = 2,
+	BFT = 0,    // Base Foundation Type
+	BFT01 = 1,  // Variation 1
+	BFT02 = 2,  // Variation 2
 	BFT_None = 3,
 	BFT_MAX = 4
 };
 
+/**
+ * @brief Enumerates custom part types for character customization.
+ */
 enum class EFortCustomPartType : uint8_t
 {
 	Head = 0,
@@ -1241,31 +1520,44 @@ enum class EFortCustomPartType : uint8_t
 	Backpack = 3,
 	Charm = 4,
 	Face = 5,
-	NumTypes = 6,
+	NumTypes = 6, // Total number of part types.
 	EFortCustomPartType_MAX = 7
 };
 
+/**
+ * @brief Generates a random integer within a specified range (inclusive).
+ * Uses C++11 random number generation facilities.
+ * @param min The minimum value (inclusive).
+ * @param max The maximum value (inclusive).
+ * @return A random integer between min and max.
+ */
 auto RandomIntInRange(int min, int max)
 {
-	std::random_device rd; // obtain a random number from hardware
-	std::mt19937 gen(rd()); // seed the generator
-	static std::uniform_int_distribution<> distr(min, max); // define the range
+	std::random_device rd;      // Obtain a random number from hardware.
+	std::mt19937 gen(rd());     // Seed the generator with a hardware-generated random number.
+	std::uniform_int_distribution<> distr(min, max); // Define the range [min, max].
 
-	return distr(gen);
+	return distr(gen); // Generate and return a random number within the range.
 }
 
+/**
+ * @brief Enumerates states for a client's login process.
+ */
 namespace EClientLoginState
 {
 	enum Type
 	{
-		Invalid = 0,		// This must be a client (which doesn't use this state) or uninitialized.
-		LoggingIn = 1,		// The client is currently logging in.
-		Welcomed = 2,		// Told client to load map and will respond with SendJoin
-		ReceivedJoin = 3,		// NMT_Join received and a player controller has been created
-		CleanedUp = 4			// Cleanup has been called at least once, the connection is considered abandoned/terminated/gone
+		Invalid = 0,        // This must be a client (which doesn't use this state) or uninitialized.
+		LoggingIn = 1,      // The client is currently logging in.
+		Welcomed = 2,       // Told client to load map and will respond with SendJoin.
+		ReceivedJoin = 3,   // NMT_Join received and a player controller has been created.
+		CleanedUp = 4       // Cleanup has been called at least once, the connection is considered abandoned/terminated/gone.
 	};
 }
 
+/**
+ * @brief Represents a Globally Unique Identifier (GUID).
+ */
 struct FGuid
 {
 	unsigned int A;
@@ -1273,28 +1565,39 @@ struct FGuid
 	unsigned int C;
 	unsigned int D;
 
-	bool operator==(const FGuid& other)
+	bool operator==(const FGuid& other) const
 	{
 		return A == other.A && B == other.B && C == other.C && D == other.D;
 	}
 };
 
+/**
+ * @brief Defines types of travel/level transitions.
+ */
 enum ETravelType
 {
-	TRAVEL_Absolute,
-	TRAVEL_Partial,
-	TRAVEL_Relative,
+	TRAVEL_Absolute, // Full URL path.
+	TRAVEL_Partial,  // Relative to current package.
+	TRAVEL_Relative, // Relative to current level.
 	TRAVEL_MAX
 };
 
-enum class EFortQuickBars : uint8_t // This isn't always correct due to them adding Creative Quickbars but for our usage it's fine.
+/**
+ * @brief Enumerates quick bar types in Fortnite.
+ * Note: The original comment mentions this might not be fully correct due to Creative Quickbars,
+ * but suitable for the intended usage.
+ */
+enum class EFortQuickBars : uint8_t
 {
 	Primary = 0,
 	Secondary = 1,
-	Max_None = 2,
+	Max_None = 2, // Placeholder for max or none.
 	EFortQuickBars_MAX = 3
 };
 
+/**
+ * @brief Enumerates source types for item pickups.
+ */
 enum class EFortPickupSourceTypeFlag : uint8_t
 {
 	Other = 0,
@@ -1307,6 +1610,9 @@ enum class EFortPickupSourceTypeFlag : uint8_t
 	EFortPickupSourceTypeFlag_MAX = 7
 };
 
+/**
+ * @brief Defines friendly fire settings.
+ */
 enum class EFriendlyFireType : uint8_t
 {
 	Off = 0,
@@ -1314,6 +1620,9 @@ enum class EFriendlyFireType : uint8_t
 	EFriendlyFireType_MAX = 2
 };
 
+/**
+ * @brief Enumerates results for structural grid queries in building systems.
+ */
 enum class EFortStructuralGridQueryResults : uint8_t
 {
 	CanAdd = 0,
@@ -1330,6 +1639,9 @@ enum class EFortStructuralGridQueryResults : uint8_t
 	EFortStructuralGridQueryResults_MAX = 11
 };
 
+/**
+ * @brief Enumerates sources from which pickups can spawn.
+ */
 enum class EFortPickupSpawnSource : uint8_t
 {
 	Unset = 0,
@@ -1340,23 +1652,32 @@ enum class EFortPickupSpawnSource : uint8_t
 	EFortPickupSpawnSource_MAX = 5
 };
 
+/**
+ * @brief Defines flags for Fast Array Serializer delta tracking.
+ * Used for optimizing network replication of arrays by only sending changed elements.
+ */
 enum class EFastArraySerializerDeltaFlags : uint8_t
 {
-	None,								//! No flags.
-	HasBeenSerialized = 1 << 0,			//! Set when serialization at least once (i.e., this struct has been written or read).
-	HasDeltaBeenRequested = 1 << 1,		//! Set if users requested Delta Serialization for this struct.
-	IsUsingDeltaSerialization = 1 << 2,	//! This will remain unset until we've serialized at least once.
-										//! At that point, this will be set if delta serialization was requested and
-										//! we support it.
+	None = 0,                               // No flags.
+	HasBeenSerialized = 1 << 0,             // Set when serialization at least once (i.e., this struct has been written or read).
+	HasDeltaBeenRequested = 1 << 1,         // Set if users requested Delta Serialization for this struct.
+	IsUsingDeltaSerialization = 1 << 2,     // This will remain unset until we've serialized at least once.
+											// At that point, this will be set if delta serialization was requested and we support it.
 };
 
+/**
+ * @brief Defines the replication policy for gameplay abilities.
+ */
 enum class EGameplayAbilityReplicationPolicy : uint8_t
 {
-	ReplicateNo = 0,
-	ReplicateYes = 1,
+	ReplicateNo = 0,    // Do not replicate this ability.
+	ReplicateYes = 1,   // Replicate this ability.
 	EGameplayAbilityReplicationPolicy_MAX = 2
 };
 
+/**
+ * @brief Enumerates different types of building structures.
+ */
 enum class EFortBuildingType : uint8_t
 {
 	Wall = 0,
@@ -1374,32 +1695,45 @@ enum class EFortBuildingType : uint8_t
 	None = 12,
 	EFortBuildingType_MAX = 13
 };
+
+/**
+ * @brief Defines flags for channel creation.
+ */
 enum class EChannelCreateFlags : uint32_t
 {
 	None = (1 << 0),
 	OpenedLocally = (1 << 1)
 };
 
+/**
+ * @brief A filter for querying building grid actors.
+ */
 struct FBuildingGridActorFilter
 {
-	bool                                               bIncludeWalls;                                            // 0x0000(0x0001) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
-	bool                                               bIncludeFloors;                                           // 0x0001(0x0001) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
-	bool                                               bIncludeFloorInTop;                                       // 0x0002(0x0001) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
-	bool                                               bIncludeCenterCell;                                       // 0x0003(0x0001) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	bool bIncludeWalls;         // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	bool bIncludeFloors;        // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	bool bIncludeFloorInTop;    // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	bool bIncludeCenterCell;    // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
 };
 
+/**
+ * @brief Represents an index within a building support cell grid.
+ */
 struct FBuildingSupportCellIndex
 {
-	int                                                X;                                                        // 0x0000(0x0004) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
-	int                                                Y;                                                        // 0x0004(0x0004) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
-	int                                                Z;                                                        // 0x0008(0x0004) (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	int X; // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	int Y; // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
+	int Z; // (Edit, BlueprintVisible, ZeroConstructor, IsPlainOldData)
 
-	bool operator==(const FBuildingSupportCellIndex& A)
+	bool operator==(const FBuildingSupportCellIndex& A) const
 	{
 		return X == A.X && Y == A.Y && Z == A.Z;
 	}
 };
 
+/**
+ * @brief Enumerates structural floor positions.
+ */
 enum class EStructuralFloorPosition : uint8_t
 {
 	Top = 0,
@@ -1407,8 +1741,10 @@ enum class EStructuralFloorPosition : uint8_t
 	EStructuralFloorPosition_MAX = 2
 };
 
-
 // Enum FortniteGame.EStructuralWallPosition
+/**
+ * @brief Enumerates structural wall positions.
+ */
 enum class EStructuralWallPosition : uint8_t
 {
 	Left = 0,
@@ -1418,13 +1754,28 @@ enum class EStructuralWallPosition : uint8_t
 	EStructuralWallPosition_MAX = 4
 };
 
+/**
+ * @brief Represents a duration of time in ticks.
+ * A tick is typically 100 nanoseconds.
+ */
 struct FTimespan
 {
 	int Ticks;
 };
 
+/**
+ * @brief Utility function to get a pointer to an object at a specific offset from an instance.
+ * Useful for accessing members of C++ objects when their full definition might not be known
+ * or when working with raw memory addresses (e.g., in game hacking/modding contexts).
+ * @tparam T The type of the object to retrieve.
+ * @param Instance A pointer to the base instance.
+ * @param Offset The byte offset from the instance's base address.
+ * @return A pointer to the object at the specified offset.
+ */
 template <typename T>
 static T* GetFromOffset(void* Instance, int Offset)
 {
-	return (T*)(__int64(Instance) + Offset);
+	// Cast the void* instance to a __int64 to perform pointer arithmetic,
+	// then add the offset, and finally cast back to T*.
+	return reinterpret_cast<T*>(reinterpret_cast<__int64>(Instance) + Offset);
 }

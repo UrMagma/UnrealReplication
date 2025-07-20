@@ -5,6 +5,13 @@
 #include <structs.h>
 //#include <Gameplay/helper.h>
 
+/*
+
+
+how the hell you fix this __int64 shit?
+
+*/
+
 static TMap<FName, uint8_t*> GetRowMap(UObject* DataTable)
 {
 	static auto RowStructOffset = GetOffset(DataTable, "RowStruct");
