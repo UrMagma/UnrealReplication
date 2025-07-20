@@ -1,7 +1,6 @@
 #include "Engine/structs.h"
 #include "Engine/other.h"
 #include "Engine/Net/UNetConnection.h"
-#include "Engine/UEngine.h"
 #include "Engine/World/UWorld.h"
 /*
 #include "Sockets.h"
