@@ -10,7 +10,7 @@
 class FMemoryArchive : public FArchive
 {
 public:
-    FMemoryArchive(std::vector<uint8_t>& InData);
+    FMemoryArchive(std::vector<uint8_t>& InData, bool bInIsSaving);
     virtual ~FMemoryArchive() = default;
 
     virtual void Serialize(void* Data, int64_t Num) override;

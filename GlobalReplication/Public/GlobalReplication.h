@@ -4,9 +4,16 @@
 #include <cstdint>
 #include <memory>
 
+enum class EPacketType : uint8_t
+{
+    Property,
+    RPC,
+};
+
 // Forward declarations
 class FArchive;
 class IReplicatedObject;
+class UReplicatedComponent;
 class IReplicationConnection;
 class IReplicationDriver;
 
@@ -17,10 +24,17 @@ class IReplicationDriver;
 class FArchive
 {
 public:
+    FArchive(bool bInIsSaving) : bIsSaving(bInIsSaving) {}
     virtual ~FArchive() = default;
     virtual void Serialize(void* Data, int64_t Num) = 0;
-    // Add more methods as needed, e.g., for seeking, telling, etc.
+
+    bool IsSaving() const { return bIsSaving; }
+
+protected:
+    bool bIsSaving;
 };
+
+#include "ReplicatedProperty.h"
 
 /**
  * @brief Interface for an object that can be replicated.
@@ -31,17 +45,55 @@ public:
     virtual ~IReplicatedObject() = default;
 
     /**
-     * @brief Serializes the object's state into an archive.
-     * @param Ar The archive to serialize to/from.
-     */
-    virtual void Serialize(FArchive& Ar) = 0;
-
-    /**
      * @brief Gets a unique identifier for this object.
      * @return A unique 64-bit integer ID.
      */
     virtual uint64_t GetNetID() const = 0;
+
+    /**
+     * @brief Gets the replication priority of this object.
+     * Higher values are replicated first.
+     * @return The priority value.
+     */
+    virtual float GetPriority() const = 0;
+
+    /**
+     * @brief Checks if the current instance has network authority over this object.
+     * @return True if this instance has authority, false otherwise.
+     */
+    virtual bool HasAuthority() const = 0;
+
+    /**
+     * @brief Gets the list of replicated properties for this object.
+     * @return A vector of pointers to the replicated properties.
+     */
+    const std::vector<FRepPropertyBase*>& GetReplicatedProperties() const { return ReplicatedProperties; }
+
+protected:
+    /**
+     * @brief Called to register all replicated properties.
+     * This should be implemented by derived classes to add their FRepProperty members to the ReplicatedProperties list.
+     */
+    virtual void RegisterReplicatedProperties() = 0;
+
+    /**
+     * @brief Called to register all replicated sub-objects.
+     */
+    virtual void RegisterReplicatedSubObjects() {}
+
+    void AddComponent(UReplicatedComponent* Comp)
+    {
+        if (Comp)
+        {
+            SubObjects.push_back(Comp);
+        }
+    }
+
+    std::vector<FRepPropertyBase*> ReplicatedProperties;
+    std::vector<UReplicatedComponent*> SubObjects;
 };
+
+class FSocket;
 
 /**
  * @brief Interface for a single client connection.
@@ -52,22 +104,17 @@ public:
     virtual ~IReplicationConnection() = default;
 
     /**
-     * @brief Sends data over the connection.
+     * @brief Sends data over the connection using the provided socket.
+     * @param Socket The socket to send data on.
      * @param Data The raw byte data to send.
      */
-    virtual void SendData(const std::vector<uint8_t>& Data) = 0;
+    virtual void SendData(FSocket& Socket, const std::vector<uint8_t>& Data) = 0;
 
     /**
-     * @brief Checks if there is pending data to be received.
-     * @return True if there is data, false otherwise.
+     * @brief Sends an RPC over the connection.
+     * @param RPCData The raw byte data for the RPC.
      */
-    virtual bool HasPendingData() const = 0;
-
-    /**
-     * @brief Gets the pending data from the connection.
-     * @return A vector of bytes containing the received data.
-     */
-    virtual std::vector<uint8_t> GetPendingData() = 0;
+    virtual void SendRPC(const std::vector<uint8_t>& RPCData) = 0;
 
     /**
      * @brief Adds an object to be replicated over this connection.

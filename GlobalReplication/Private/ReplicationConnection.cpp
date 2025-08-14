@@ -1,38 +1,38 @@
 #include "GlobalReplication/Public/ReplicationConnection.h"
+#include "GlobalReplication/Public/Socket.h"
 #include <algorithm>
+#include <iostream>
 
-ReplicationConnection::ReplicationConnection()
+ReplicationConnection::ReplicationConnection(const sockaddr_in& InAddr)
+    : Address(InAddr)
 {
 }
 
-void ReplicationConnection::SendData(const std::vector<uint8_t>& Data)
+void ReplicationConnection::SendData(FSocket& Socket, const std::vector<uint8_t>& Data)
 {
-    OutgoingBuffer.push(Data);
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(Address.sin_addr), ip, INET_ADDRSTRLEN);
+    Socket.SendTo(Data, ip, ntohs(Address.sin_port));
 }
 
-bool ReplicationConnection::HasPendingData() const
+void ReplicationConnection::SendRPC(const std::vector<uint8_t>& RPCData)
 {
-    return !IncomingBuffer.empty();
-}
-
-std::vector<uint8_t> ReplicationConnection::GetPendingData()
-{
-    if (IncomingBuffer.empty())
-    {
-        return {};
-    }
-
-    std::vector<uint8_t> Data = IncomingBuffer.front();
-    IncomingBuffer.pop();
-    return Data;
+    std::cout << "Queueing RPC with size " << RPCData.size() << std::endl;
+    OutgoingRPCBuffer.push(RPCData);
 }
 
 void ReplicationConnection::AddReplicatedObject(IReplicatedObject* Obj)
 {
-    ReplicatedObjects.push_back(Obj);
+    if (Obj)
+    {
+        ReplicatedObjects[Obj->GetNetID()] = Obj;
+    }
 }
 
 void ReplicationConnection::RemoveReplicatedObject(IReplicatedObject* Obj)
 {
-    ReplicatedObjects.erase(std::remove(ReplicatedObjects.begin(), ReplicatedObjects.end(), Obj), ReplicatedObjects.end());
+    if (Obj)
+    {
+        ReplicatedObjects.erase(Obj->GetNetID());
+    }
 }
