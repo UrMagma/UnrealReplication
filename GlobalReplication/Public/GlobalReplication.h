@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "DataTypes.h"
+#include "RPC.h"
+
 enum class EPacketType : uint8_t
 {
     Property,
@@ -16,6 +19,11 @@ class IReplicatedObject;
 class UReplicatedComponent;
 class IReplicationConnection;
 class IReplicationDriver;
+
+// Forward declarations for serialization operators
+class FString;
+template<typename T>
+class TArray;
 
 /**
  * @brief A virtual archive for serializing data.
@@ -30,6 +38,20 @@ public:
 
     bool IsSaving() const { return bIsSaving; }
 
+    // Serialization operators for fundamental types
+    FArchive& operator<<(uint8_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(uint32_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(uint64_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(int32_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(int64_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(float& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(bool& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+
+    // Serialization operators for complex types
+    FArchive& operator<<(FString& Val) { Val.Serialize(*this); return *this; }
+    template<typename T>
+    FArchive& operator<<(TArray<T>& Val) { Val.Serialize(*this); return *this; }
+
 protected:
     bool bIsSaving;
 };
@@ -37,11 +59,38 @@ protected:
 #include "ReplicatedProperty.h"
 
 /**
- * @brief Interface for an object that can be replicated.
+ * @brief A base class for any object that has replicated properties.
  */
-class IReplicatedObject
+class FReplicatedObjectBase
 {
 public:
+    virtual ~FReplicatedObjectBase() = default;
+
+    /**
+     * @brief Gets the list of replicated properties for this object.
+     * @return A vector of pointers to the replicated properties.
+     */
+    const std::vector<FRepPropertyBase*>& GetReplicatedProperties() const { return ReplicatedProperties; }
+
+protected:
+    /**
+     * @brief Called to register all replicated properties.
+     * This should be implemented by derived classes to add their FRepProperty members to the ReplicatedProperties list.
+     */
+    virtual void RegisterReplicatedProperties() = 0;
+
+    std::vector<FRepPropertyBase*> ReplicatedProperties;
+};
+
+
+/**
+ * @brief Interface for an object that can be replicated.
+ */
+class IReplicatedObject : public FReplicatedObjectBase
+{
+public:
+    static void RegisterBuiltInRPCs();
+
     virtual ~IReplicatedObject() = default;
 
     /**
@@ -63,38 +112,49 @@ public:
      */
     virtual bool HasAuthority() const = 0;
 
+    /**
+     * @brief Sets whether this object can have its ownership transferred to a client.
+     * @param bCanBeOwned True if ownership can be transferred.
+     */
+    void SetAllowClientOwnership(bool bCanBeOwned) { bAllowClientOwnership = bCanBeOwned; }
+    bool CanBeOwnedByClient() const { return bAllowClientOwnership; }
+
+    // --- Built-in RPCs for ownership ---
+    virtual void Server_RequestOwnership();
+    virtual void Client_GainedOwnership();
+    virtual void Client_LostOwnership();
+
     void SetOwningConnection(std::shared_ptr<IReplicationConnection> Conn) { OwningConnection = Conn; }
     std::shared_ptr<IReplicationConnection> GetOwningConnection() const { return OwningConnection; }
 
     /**
-     * @brief Gets the list of replicated properties for this object.
-     * @return A vector of pointers to the replicated properties.
+     * @brief Sends an RPC from a non-authoritative instance to the authoritative instance.
+     * @param RpcName The registered name of the RPC (e.g., "ClassName::FunctionName").
+     * @param args The arguments to pass to the RPC.
+     * @note The implementation for this template function is in GlobalReplication.inl.
+     *       You must #include "GlobalReplication/Public/GlobalReplication.inl" in the .cpp file where you call this.
      */
-    const std::vector<FRepPropertyBase*>& GetReplicatedProperties() const { return ReplicatedProperties; }
+    template<typename... Args>
+    void SendRPC(const std::string& RpcName, Args&&... args);
+
+    /**
+     * @brief Queues an RPC to be called on the client that owns this object.
+     * This should only be called from the authoritative instance.
+     */
+    template<typename... Args>
+    void CallRPC_OnClient(const std::string& RpcName, Args&&... args);
+
+    void AddComponent(UReplicatedComponent* Comp);
 
 protected:
-    /**
-     * @brief Called to register all replicated properties.
-     * This should be implemented by derived classes to add their FRepProperty members to the ReplicatedProperties list.
-     */
-    virtual void RegisterReplicatedProperties() = 0;
-
     /**
      * @brief Called to register all replicated sub-objects.
      */
     virtual void RegisterReplicatedSubObjects() {}
 
-    void AddComponent(UReplicatedComponent* Comp)
-    {
-        if (Comp)
-        {
-            SubObjects.push_back(Comp);
-        }
-    }
-
-    std::vector<FRepPropertyBase*> ReplicatedProperties;
     std::vector<UReplicatedComponent*> SubObjects;
     std::shared_ptr<IReplicationConnection> OwningConnection;
+    bool bAllowClientOwnership = false;
 
 public:
     const std::vector<UReplicatedComponent*>& GetSubObjects() const { return SubObjects; }
@@ -119,9 +179,9 @@ public:
 
     /**
      * @brief Sends an RPC over the connection.
-     * @param RPCData The raw byte data for the RPC.
+     * @param Data The RPC data payload.
      */
-    virtual void SendRPC(const std::vector<uint8_t>& RPCData) = 0;
+    virtual void SendRPC(const FRPCData& Data) = 0;
 
     /**
      * @brief Adds an object to be replicated over this connection.

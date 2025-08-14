@@ -44,10 +44,17 @@ public:
     // Allow implicit conversion to the underlying type for easy access.
     operator T() const { return Value; }
 
+    // Explicit getter for safer access
+    const T& Get() const { return Value; }
+    T& Get() { return Value; }
+
+    // Manually mark the property as dirty
+    void MarkDirty() { bIsDirty = true; }
+
     // Serialize the property's value into an archive.
     virtual void Serialize(FArchive& Ar) override
     {
-        Ar.Serialize(&Value, sizeof(T));
+        Ar << Value;
     }
 
     // Check if the property has been changed since the last update.

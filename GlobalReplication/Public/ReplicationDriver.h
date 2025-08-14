@@ -42,8 +42,9 @@ public:
     void RegisterObject(IReplicatedObject* Obj);
     void SetObjectOwner(IReplicatedObject* Obj, std::shared_ptr<IReplicationConnection> NewOwner);
 
-private:
-    void HandleRPC(const std::vector<uint8_t>& RPCData);
+protected:
+    void HandleRPC(const std::vector<uint8_t>& RPCData, std::shared_ptr<IReplicationConnection> SourceConnection);
+    void HandlePropertyUpdate(const std::vector<uint8_t>& PacketData);
 
     FSocket ListenSocket;
     std::unordered_map<sockaddr_in, std::shared_ptr<IReplicationConnection>> Connections;

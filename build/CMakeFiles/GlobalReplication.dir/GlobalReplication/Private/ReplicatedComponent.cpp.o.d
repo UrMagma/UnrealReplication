@@ -1,7 +1,7 @@
-CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o: \
- /app/GlobalReplication/Private/ReplicationDriver.cpp \
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o: \
+ /app/GlobalReplication/Private/ReplicatedComponent.cpp \
  /usr/include/stdc-predef.h \
- /app/GlobalReplication/Public/ReplicationDriver.h \
+ /app/GlobalReplication/Public/ReplicatedComponent.h \
  /app/GlobalReplication/Public/GlobalReplication.h \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
@@ -217,37 +217,4 @@ CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp
  /usr/include/c++/13/bits/uniform_int_dist.h /usr/include/c++/13/iostream \
  /usr/include/c++/13/istream /usr/include/c++/13/bits/istream.tcc \
  /usr/include/c++/13/utility /usr/include/c++/13/bits/stl_relops.h \
- /app/GlobalReplication/Public/ReplicatedProperty.h \
- /app/GlobalReplication/Public/Socket.h \
- /usr/include/x86_64-linux-gnu/sys/socket.h \
- /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h \
- /usr/include/x86_64-linux-gnu/bits/socket.h \
- /usr/include/x86_64-linux-gnu/bits/socket_type.h \
- /usr/include/x86_64-linux-gnu/bits/sockaddr.h \
- /usr/include/x86_64-linux-gnu/asm/socket.h \
- /usr/include/asm-generic/socket.h /usr/include/linux/posix_types.h \
- /usr/include/linux/stddef.h \
- /usr/include/x86_64-linux-gnu/asm/posix_types.h \
- /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
- /usr/include/asm-generic/posix_types.h \
- /usr/include/x86_64-linux-gnu/asm/bitsperlong.h \
- /usr/include/asm-generic/bitsperlong.h \
- /usr/include/x86_64-linux-gnu/asm/sockios.h \
- /usr/include/asm-generic/sockios.h \
- /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h \
- /usr/include/netinet/in.h /usr/include/x86_64-linux-gnu/bits/in.h \
- /usr/include/arpa/inet.h /usr/include/fcntl.h \
- /usr/include/x86_64-linux-gnu/bits/fcntl.h \
- /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h \
- /usr/include/linux/falloc.h /usr/include/x86_64-linux-gnu/bits/stat.h \
- /usr/include/x86_64-linux-gnu/bits/struct_stat.h \
- /app/GlobalReplication/Public/ReplicationConnection.h \
- /usr/include/c++/13/queue /usr/include/c++/13/deque \
- /usr/include/c++/13/bits/stl_deque.h /usr/include/c++/13/bits/deque.tcc \
- /usr/include/c++/13/bits/stl_queue.h \
- /app/GlobalReplication/Public/GlobalReplication.inl \
- /app/GlobalReplication/Public/MemoryArchive.h \
- /app/GlobalReplication/Public/ReplicatedComponent.h \
- /usr/include/c++/13/algorithm /usr/include/c++/13/bits/ranges_algo.h \
- /usr/include/c++/13/pstl/glue_algorithm_defs.h \
- /app/GlobalReplication/Private/ReplicationInternals.h
+ /app/GlobalReplication/Public/ReplicatedProperty.h

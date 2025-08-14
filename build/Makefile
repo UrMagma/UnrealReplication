@@ -166,6 +166,78 @@ GlobalReplication/Private/MemoryArchive.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.s
 .PHONY : GlobalReplication/Private/MemoryArchive.cpp.s
 
+GlobalReplication/Private/RPC.o: GlobalReplication/Private/RPC.cpp.o
+.PHONY : GlobalReplication/Private/RPC.o
+
+# target to build an object file
+GlobalReplication/Private/RPC.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o
+.PHONY : GlobalReplication/Private/RPC.cpp.o
+
+GlobalReplication/Private/RPC.i: GlobalReplication/Private/RPC.cpp.i
+.PHONY : GlobalReplication/Private/RPC.i
+
+# target to preprocess a source file
+GlobalReplication/Private/RPC.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.i
+.PHONY : GlobalReplication/Private/RPC.cpp.i
+
+GlobalReplication/Private/RPC.s: GlobalReplication/Private/RPC.cpp.s
+.PHONY : GlobalReplication/Private/RPC.s
+
+# target to generate assembly for a file
+GlobalReplication/Private/RPC.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.s
+.PHONY : GlobalReplication/Private/RPC.cpp.s
+
+GlobalReplication/Private/ReplicatedComponent.o: GlobalReplication/Private/ReplicatedComponent.cpp.o
+.PHONY : GlobalReplication/Private/ReplicatedComponent.o
+
+# target to build an object file
+GlobalReplication/Private/ReplicatedComponent.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o
+.PHONY : GlobalReplication/Private/ReplicatedComponent.cpp.o
+
+GlobalReplication/Private/ReplicatedComponent.i: GlobalReplication/Private/ReplicatedComponent.cpp.i
+.PHONY : GlobalReplication/Private/ReplicatedComponent.i
+
+# target to preprocess a source file
+GlobalReplication/Private/ReplicatedComponent.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.i
+.PHONY : GlobalReplication/Private/ReplicatedComponent.cpp.i
+
+GlobalReplication/Private/ReplicatedComponent.s: GlobalReplication/Private/ReplicatedComponent.cpp.s
+.PHONY : GlobalReplication/Private/ReplicatedComponent.s
+
+# target to generate assembly for a file
+GlobalReplication/Private/ReplicatedComponent.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.s
+.PHONY : GlobalReplication/Private/ReplicatedComponent.cpp.s
+
+GlobalReplication/Private/ReplicatedObject.o: GlobalReplication/Private/ReplicatedObject.cpp.o
+.PHONY : GlobalReplication/Private/ReplicatedObject.o
+
+# target to build an object file
+GlobalReplication/Private/ReplicatedObject.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.o
+.PHONY : GlobalReplication/Private/ReplicatedObject.cpp.o
+
+GlobalReplication/Private/ReplicatedObject.i: GlobalReplication/Private/ReplicatedObject.cpp.i
+.PHONY : GlobalReplication/Private/ReplicatedObject.i
+
+# target to preprocess a source file
+GlobalReplication/Private/ReplicatedObject.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.i
+.PHONY : GlobalReplication/Private/ReplicatedObject.cpp.i
+
+GlobalReplication/Private/ReplicatedObject.s: GlobalReplication/Private/ReplicatedObject.cpp.s
+.PHONY : GlobalReplication/Private/ReplicatedObject.s
+
+# target to generate assembly for a file
+GlobalReplication/Private/ReplicatedObject.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.s
+.PHONY : GlobalReplication/Private/ReplicatedObject.cpp.s
+
 GlobalReplication/Private/ReplicationConnection.o: GlobalReplication/Private/ReplicationConnection.cpp.o
 .PHONY : GlobalReplication/Private/ReplicationConnection.o
 
@@ -275,6 +347,15 @@ help:
 	@echo "... GlobalReplication/Private/MemoryArchive.o"
 	@echo "... GlobalReplication/Private/MemoryArchive.i"
 	@echo "... GlobalReplication/Private/MemoryArchive.s"
+	@echo "... GlobalReplication/Private/RPC.o"
+	@echo "... GlobalReplication/Private/RPC.i"
+	@echo "... GlobalReplication/Private/RPC.s"
+	@echo "... GlobalReplication/Private/ReplicatedComponent.o"
+	@echo "... GlobalReplication/Private/ReplicatedComponent.i"
+	@echo "... GlobalReplication/Private/ReplicatedComponent.s"
+	@echo "... GlobalReplication/Private/ReplicatedObject.o"
+	@echo "... GlobalReplication/Private/ReplicatedObject.i"
+	@echo "... GlobalReplication/Private/ReplicatedObject.s"
 	@echo "... GlobalReplication/Private/ReplicationConnection.o"
 	@echo "... GlobalReplication/Private/ReplicationConnection.i"
 	@echo "... GlobalReplication/Private/ReplicationConnection.s"

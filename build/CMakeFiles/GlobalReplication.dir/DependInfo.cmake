@@ -9,6 +9,9 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/app/GlobalReplication/Private/MemoryArchive.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o.d"
+  "/app/GlobalReplication/Private/RPC.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o.d"
+  "/app/GlobalReplication/Private/ReplicatedComponent.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o.d"
+  "/app/GlobalReplication/Private/ReplicatedObject.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.o.d"
   "/app/GlobalReplication/Private/ReplicationConnection.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o.d"
   "/app/GlobalReplication/Private/ReplicationDriver.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o.d"
   "/app/GlobalReplication/Private/Socket.cpp" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o" "gcc" "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o.d"

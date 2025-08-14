@@ -5,6 +5,8 @@
 #include "GlobalReplication/Public/ReplicatedProperty.h"
 #include "GlobalReplication/Public/Socket.h"
 #include "GlobalReplication/Public/RPC.h"
+#include "GlobalReplication/Public/ReplicatedComponent.h"
+#include "GlobalReplication/Private/ReplicationInternals.h"
 #include <iostream>
 #include <vector>
 #include <cstdint>
@@ -20,115 +22,186 @@ public:
     {
         NetID = InNetID;
         RegisterReplicatedProperties();
+
+        // Register our RPCs
+        REGISTER_RPC(MyReplicatedObject, Server_UpdatePlayerMessage);
     }
 
     void RegisterReplicatedProperties() override
     {
         ReplicatedProperties.push_back(&NetID);
+        ReplicatedProperties.push_back(&PlayerName);
+        ReplicatedProperties.push_back(&LastMessage);
+    }
+
+    // --- RPC Definition ---
+    // This is the function that will be executed on the authoritative instance.
+    void Server_UpdatePlayerMessage(const FString& NewMessage, int32_t SomeValue)
+    {
+        std::cout << "[RPC EXEC] Server_UpdatePlayerMessage called on object " << (uint64_t)NetID << std::endl;
+        std::cout << "           NewMessage: " << NewMessage.ToString().c_str() << std::endl;
+        std::cout << "           SomeValue: " << SomeValue << std::endl;
+        LastMessage = NewMessage;
+    }
+
+    // Override the built-in ownership RPCs to react to changes
+    void Client_GainedOwnership() override
+    {
+        std::cout << "[Object " << (uint64_t)NetID << "] I have gained ownership!" << std::endl;
+        bHasAuthority = true;
+    }
+
+    void Client_LostOwnership() override
+    {
+        std::cout << "[Object " << (uint64_t)NetID << "] I have lost ownership." << std::endl;
+        bHasAuthority = false;
     }
 
     uint64_t GetNetID() const override { return NetID; }
     float GetPriority() const override { return 1.0f; }
+    bool HasAuthority() const override { return bHasAuthority; }
 
-    bool HasAuthority() const override
+    void Print() const
     {
-        // In a real client/server architecture, the client would need to know
-        // its own connection to check for ownership. For this example,
-        // we'll simulate this by having a flag.
-        return bHasAuthority;
+        std::cout << "  NetID: " << (uint64_t)NetID << std::endl;
+        std::cout << "  PlayerName: " << ((FString)PlayerName).ToString().c_str() << std::endl;
+        std::cout << "  LastMessage: " << ((FString)LastMessage).ToString().c_str() << std::endl;
     }
 
-    // Declare an RPC that requires authority
-    DECLARE_RPC(Server_DoSomething);
-
-    FRepProperty<uint64_t> NetID = 0;
-    bool bHasAuthority = false; // By default, no authority
+    bool bHasAuthority = false;
+    FRepProperty<uint64_t> NetID;
+    FRepProperty<FString> PlayerName;
+    FRepProperty<FString> LastMessage;
 };
 
-// Implement the RPC
-IMPLEMENT_RPC(MyReplicatedObject, Server_DoSomething);
-
-
-// Global state to coordinate the test
-std::atomic<bool> bServerShouldStop = false;
-
-// Server logic
-void RunServer(ReplicationDriver& Driver)
+// A replicated component for demonstration
+class MyPlayerStatsComponent : public UReplicatedComponent
 {
-    while (!bServerShouldStop)
+public:
+    MyPlayerStatsComponent(IReplicatedObject* InOwner) : UReplicatedComponent(InOwner)
     {
-        Driver.Tick(0.016f);
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        RegisterReplicatedProperties();
     }
-    std::cout << "[Server] Shutting down." << std::endl;
-}
 
-// Client logic
-void RunClient(FSocket& ClientSocket)
+    void RegisterReplicatedProperties() override
+    {
+        ReplicatedProperties.push_back(&Health);
+        ReplicatedProperties.push_back(&Stamina);
+    }
+
+    void Print() const
+    {
+        std::cout << "    Health: " << (int)Health << ", Stamina: " << (int)Stamina << std::endl;
+    }
+
+    FRepProperty<int32_t> Health = 100;
+    FRepProperty<int32_t> Stamina = 100;
+};
+
+// This is a dummy driver class for testing purposes.
+class TestReplicationDriver : public ReplicationDriver
 {
-    // Send a "hello" message to the server
-    std::vector<uint8_t> HelloMessage = { 'h', 'e', 'l', 'l', 'o' };
-    ClientSocket.SendTo(HelloMessage, "127.0.0.1", 8888);
-    std::cout << "[Client] Sent hello message." << std::endl;
-}
+public:
+    void TestHandlePropertyUpdate(const std::vector<uint8_t>& PacketData)
+    {
+        HandlePropertyUpdate(PacketData);
+    }
+};
+
 
 int main()
 {
-    std::cout << "--- GlobalReplication Ownership Test ---" << std::endl;
+    std::cout << "--- Sub-Object Replication Test ---" << std::endl;
 
-    // 1. Create a replicated object on the server
-    MyReplicatedObject ServerObj(101);
-    ServerObj.bHasAuthority = true; // Server has authority initially
-    std::cout << "[Server] Created object " << ServerObj.GetNetID() << std::endl;
+    // 1. Create a "server-side" object and its component
+    MyReplicatedObject ServerObject(101);
+    MyPlayerStatsComponent ServerStats(&ServerObject);
+    ServerObject.AddComponent(&ServerStats);
 
-    // 2. Create and initialize the server driver
-    ReplicationDriver Driver;
-    Driver.RegisterObject(&ServerObj);
+    // Change some properties
+    ServerObject.PlayerName = "ServerJules";
+    ServerStats.Health = 50;
+    ServerStats.Stamina = 75;
 
-    Driver.OnNewConnection = [&](std::shared_ptr<IReplicationConnection> NewConn)
+    std::cout << "\n[Server] Initial state:" << std::endl;
+    ServerObject.Print();
+    ServerStats.Print();
+
+    // 2. Manually create a property update packet for the main object
+    std::vector<uint8_t> ServerObjectPacket;
     {
-        std::cout << "[Server] New connection established. Transferring ownership of object " << ServerObj.GetNetID() << std::endl;
-        Driver.SetObjectOwner(&ServerObj, NewConn);
+        FPropertyPacketHeader Header;
+        Header.NetID = ServerObject.GetNetID();
+        Header.SubObjectIndex = 0;
 
-        // In a real implementation, the client would be notified of the ownership change.
-        // For this test, we'll just assume the client now has authority.
-    };
+        std::vector<uint8_t> HeaderData, PropertyData;
+        FMemoryArchive HeaderAr(HeaderData, true);
+        Header.Serialize(HeaderAr);
 
-    if (!Driver.Init(8888))
+        FMemoryArchive PropertyAr(PropertyData, true);
+        for(auto* Prop : ServerObject.GetReplicatedProperties()) Prop->Serialize(PropertyAr);
+
+        ServerObjectPacket.push_back((uint8_t)EPacketType::Property);
+        ServerObjectPacket.insert(ServerObjectPacket.end(), HeaderData.begin(), HeaderData.end());
+        ServerObjectPacket.insert(ServerObjectPacket.end(), PropertyData.begin(), PropertyData.end());
+    }
+
+    // 3. Manually create a property update packet for the component
+    std::vector<uint8_t> ServerCompPacket;
     {
+        FPropertyPacketHeader Header;
+        Header.NetID = ServerObject.GetNetID();
+        Header.SubObjectIndex = ServerStats.GetSubObjectIndex() + 1;
+
+        std::vector<uint8_t> HeaderData, PropertyData;
+        FMemoryArchive HeaderAr(HeaderData, true);
+        Header.Serialize(HeaderAr);
+
+        FMemoryArchive PropertyAr(PropertyData, true);
+        for(auto* Prop : ServerStats.GetReplicatedProperties()) Prop->Serialize(PropertyAr);
+
+        ServerCompPacket.push_back((uint8_t)EPacketType::Property);
+        ServerCompPacket.insert(ServerCompPacket.end(), HeaderData.begin(), HeaderData.end());
+        ServerCompPacket.insert(ServerCompPacket.end(), PropertyData.begin(), PropertyData.end());
+    }
+
+    // 4. Create a "client-side" object and driver
+    TestReplicationDriver ClientDriver;
+    MyReplicatedObject ClientObject(101);
+    MyPlayerStatsComponent ClientStats(&ClientObject);
+    ClientObject.AddComponent(&ClientStats);
+    ClientDriver.RegisterObject(&ClientObject);
+
+    std::cout << "\n[Client] Initial state:" << std::endl;
+    ClientObject.Print();
+    ClientStats.Print();
+
+    // 5. Process the packets on the client driver
+    std::cout << "\n[Client] Applying property updates..." << std::endl;
+    ClientDriver.TestHandlePropertyUpdate(std::vector<uint8_t>(ServerObjectPacket.begin() + 1, ServerObjectPacket.end()));
+    ClientDriver.TestHandlePropertyUpdate(std::vector<uint8_t>(ServerCompPacket.begin() + 1, ServerCompPacket.end()));
+
+    // 6. Verification
+    std::cout << "\n[Client] Final state:" << std::endl;
+    ClientObject.Print();
+    ClientStats.Print();
+
+    std::cout << "\n--- Verification ---" << std::endl;
+    bool bSuccess = true;
+    if ((FString)ServerObject.PlayerName != (FString)ClientObject.PlayerName) bSuccess = false;
+    if ((int32_t)ServerStats.Health != (int32_t)ClientStats.Health) bSuccess = false;
+    if ((int32_t)ServerStats.Stamina != (int32_t)ClientStats.Stamina) bSuccess = false;
+
+    if (bSuccess)
+    {
+        std::cout << "SUCCESS: All properties replicated correctly." << std::endl;
+    }
+    else
+    {
+        std::cout << "FAILED: Property mismatch after replication." << std::endl;
         return 1;
     }
-    std::cout << "[Server] Listening on port 8888" << std::endl;
-
-    // 3. Create the client socket
-    FSocket ClientSocket;
-    if (!ClientSocket.Create())
-    {
-        return 1;
-    }
-
-    // 4. Run the server and client in separate threads
-    std::thread ServerThread(RunServer, std::ref(Driver));
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Give server time to start
-    std::thread ClientThread(RunClient, std::ref(ClientSocket));
-
-    // 5. Wait a moment for the connection to be established and ownership transferred
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    // 6. Now, create a client-side representation of the object and call an RPC
-    // that requires authority. Since ownership was transferred, this should execute locally.
-    std::cout << "\n[Client] Attempting to call RPC with authority..." << std::endl;
-    MyReplicatedObject ClientObj(101);
-    ClientObj.bHasAuthority = true; // Simulate the client knowing it has authority
-    ClientObj.Server_DoSomething();
-
-
-    // 7. Stop the server
-    bServerShouldStop = true;
-    ServerThread.join();
-    ClientThread.join();
 
     std::cout << "\n--- Test Complete ---" << std::endl;
-
     return 0;
 }

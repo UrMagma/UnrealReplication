@@ -62,9 +62,9 @@ bool FSocket::SendTo(const std::vector<uint8_t>& Data, const std::string& Addres
     inet_pton(AF_INET, Address.c_str(), &Addr.sin_addr);
 
     int32_t SentBytes = sendto(SocketHandle, (const char*)Data.data(), Data.size(), 0, (sockaddr*)&Addr, sizeof(Addr));
-    if (SentBytes != Data.size())
+    if (SentBytes < 0)
     {
-        std::cerr << "Failed to send data" << std::endl;
+        std::cerr << "Failed to send data (sendto failed)" << std::endl;
         return false;
     }
     return true;

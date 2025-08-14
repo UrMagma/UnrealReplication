@@ -1,6 +1,12 @@
 file(REMOVE_RECURSE
   "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o"
   "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o.d"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o.d"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedComponent.cpp.o.d"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.o"
+  "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicatedObject.cpp.o.d"
   "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o"
   "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o.d"
   "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o"
