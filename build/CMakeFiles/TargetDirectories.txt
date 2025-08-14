@@ -1,0 +1,4 @@
+/app/build/CMakeFiles/GlobalReplication.dir
+/app/build/CMakeFiles/Example.dir
+/app/build/CMakeFiles/edit_cache.dir
+/app/build/CMakeFiles/rebuild_cache.dir

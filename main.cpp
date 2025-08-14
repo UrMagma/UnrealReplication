@@ -2,96 +2,131 @@
 #include "GlobalReplication/Public/ReplicationDriver.h"
 #include "GlobalReplication/Public/ReplicationConnection.h"
 #include "GlobalReplication/Public/MemoryArchive.h"
+#include "GlobalReplication/Public/ReplicatedProperty.h"
+#include "GlobalReplication/Public/Socket.h"
+#include "GlobalReplication/Public/RPC.h"
 #include <iostream>
 #include <vector>
 #include <cstdint>
+#include <thread>
+#include <atomic>
+#include <functional>
 
-/**
- * @brief A simple implementation of IReplicatedObject for demonstration.
- */
+// A simple replicated object for demonstration
 class MyReplicatedObject : public IReplicatedObject
 {
 public:
-    MyReplicatedObject(uint64_t InNetID, float InX, float InY, int InHealth)
-        : NetID(InNetID), x(InX), y(InY), health(InHealth)
+    MyReplicatedObject(uint64_t InNetID = 0)
     {
+        NetID = InNetID;
+        RegisterReplicatedProperties();
+
+        // Register our RPCs
+        REGISTER_RPC(MyReplicatedObject, Server_UpdatePlayerMessage);
     }
 
-    virtual void Serialize(FArchive& Ar) override
+    void RegisterReplicatedProperties() override
     {
-        Ar.Serialize(&NetID, sizeof(NetID));
-        Ar.Serialize(&x, sizeof(x));
-        Ar.Serialize(&y, sizeof(y));
-        Ar.Serialize(&health, sizeof(health));
+        ReplicatedProperties.push_back(&NetID);
+        ReplicatedProperties.push_back(&PlayerName);
+        ReplicatedProperties.push_back(&LastMessage);
     }
 
-    virtual uint64_t GetNetID() const override
+    // --- RPC Definition ---
+    // This is the function that will be executed on the authoritative instance.
+    void Server_UpdatePlayerMessage(const FString& NewMessage, int32_t SomeValue)
     {
-        return NetID;
+        std::cout << "[RPC EXEC] Server_UpdatePlayerMessage called on object " << (uint64_t)NetID << std::endl;
+        std::cout << "           NewMessage: " << NewMessage.ToString().c_str() << std::endl;
+        std::cout << "           SomeValue: " << SomeValue << std::endl;
+        LastMessage = NewMessage;
     }
+
+    uint64_t GetNetID() const override { return NetID; }
+    float GetPriority() const override { return 1.0f; }
+    bool HasAuthority() const override { return bHasAuthority; }
 
     void Print() const
     {
-        std::cout << "  ReplicatedObject ID: " << NetID << ", x: " << x << ", y: " << y << ", health: " << health << std::endl;
+        std::cout << "  NetID: " << (uint64_t)NetID << std::endl;
+        std::cout << "  PlayerName: " << ((FString)PlayerName).ToString().c_str() << std::endl;
+        std::cout << "  LastMessage: " << ((FString)LastMessage).ToString().c_str() << std::endl;
     }
 
-private:
-    uint64_t NetID;
-    float x;
-    float y;
-    int health;
+    bool bHasAuthority = false;
+    FRepProperty<uint64_t> NetID;
+    FRepProperty<FString> PlayerName;
+    FRepProperty<FString> LastMessage;
 };
+
+// This is a dummy driver class for testing purposes.
+// It gives us direct access to the HandleRPC method.
+class TestReplicationDriver : public ReplicationDriver
+{
+public:
+    void TestHandleRPC(const std::vector<uint8_t>& PacketData)
+    {
+        HandleRPC(PacketData);
+    }
+};
+
 
 int main()
 {
-    std::cout << "--- GlobalReplication Demonstration ---" << std::endl;
+    std::cout << "--- RPC with Parameters Test ---" << std::endl;
 
-    // 1. Create the replication driver
-    auto Driver = std::make_shared<ReplicationDriver>();
-    std::cout << "Created ReplicationDriver." << std::endl;
+    // 1. Create a "server-side" object instance. This is the one that has authority.
+    MyReplicatedObject ServerObject(101);
+    ServerObject.bHasAuthority = true;
+    ServerObject.PlayerName = "Jules";
+    ServerObject.LastMessage = "Initial";
 
-    // 2. Create a connection
-    auto Connection = std::make_shared<ReplicationConnection>();
-    Driver->AddConnection(Connection);
-    std::cout << "Created and added a ReplicationConnection." << std::endl;
+    std::cout << "\n[Server] Initial state:" << std::endl;
+    ServerObject.Print();
 
-    // 3. Create some replicated objects
-    MyReplicatedObject Obj1(101, 10.0f, 20.0f, 100);
-    MyReplicatedObject Obj2(102, 30.0f, 40.0f, 80);
-    std::cout << "Created two replicated objects:" << std::endl;
-    Obj1.Print();
-    Obj2.Print();
+    // 2. Create a "client-side" representation of the object.
+    MyReplicatedObject ClientObject(101);
+    ClientObject.bHasAuthority = false;
 
-    // 4. Add the objects to the connection's replication list
-    Connection->AddReplicatedObject(&Obj1);
-    Connection->AddReplicatedObject(&Obj2);
-    std::cout << "\nAdded objects to the connection's replication list." << std::endl;
+    // 3. Simulate the client calling the RPC.
+    FString MessageToSend = "Hello from the client!";
+    int32_t ValueToSend = 42;
 
-    // 5. Tick the driver to simulate one frame of replication
-    std::cout << "\nTicking the replication driver..." << std::endl;
-    Driver->Tick(0.016f);
+    std::vector<uint8_t> ParamBuffer;
+    FMemoryArchive SaveParamsArchive(ParamBuffer, true);
+    SaveParamsArchive << MessageToSend << ValueToSend;
 
-    // 6. Check the connection's outgoing buffer to see the serialized data
-    std::cout << "\nChecking the connection's outgoing buffer:" << std::endl;
-    int PacketNum = 0;
-    while (static_cast<ReplicationConnection*>(Connection.get())->HasPendingData())
+    FRPCData RpcData;
+    RpcData.NetID = ClientObject.GetNetID();
+    RpcData.FunctionName = "MyReplicatedObject::Server_UpdatePlayerMessage";
+    RpcData.Parameters = ParamBuffer;
+
+    std::vector<uint8_t> PacketPayload;
+    FMemoryArchive SavePacketArchive(PacketPayload, true);
+    RpcData.Serialize(SavePacketArchive);
+
+    std::cout << "\n[Client] Calling RPC with message: '" << MessageToSend.ToString().c_str() << "' and value: " << ValueToSend << std::endl;
+
+    // 4. The server's driver receives this payload and processes it.
+    TestReplicationDriver Driver;
+    Driver.RegisterObject(&ServerObject);
+    Driver.TestHandleRPC(PacketPayload);
+
+    // 5. Verify the state of the server object was changed by the RPC.
+    std::cout << "\n[Server] Final state:" << std::endl;
+    ServerObject.Print();
+
+    std::cout << "\n--- Verification ---" << std::endl;
+    if (((FString)ServerObject.LastMessage) == MessageToSend)
     {
-        auto Packet = static_cast<ReplicationConnection*>(Connection.get())->GetPendingData();
-        std::cout << "  Packet " << ++PacketNum << " size: " << Packet.size() << " bytes" << std::endl;
+        std::cout << "SUCCESS: The RPC was executed correctly." << std::endl;
+    }
+    else
+    {
+        std::cout << "FAILED: The RPC did not modify the server state." << std::endl;
+        return 1;
     }
 
-    if (PacketNum == 0)
-    {
-        // The current implementation of ReplicationConnection uses separate incoming/outgoing buffers,
-        // so we can't directly check the outgoing data this way. The Tick function in the driver
-        // calls SendData, which populates the OutgoingBuffer. A real implementation would
-        // have a way to flush this buffer to a socket. For this example, we'll assume the
-        // "Replicated object..." messages from the driver's Tick are sufficient to show it's working.
-        std::cout << "  (Note: Outgoing buffer is not directly readable in this example, but Tick has processed the data.)" << std::endl;
-    }
-
-
-    std::cout << "\n--- Demonstration Complete ---" << std::endl;
-
+    std::cout << "\n--- Test Complete ---" << std::endl;
     return 0;
 }
