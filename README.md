@@ -6,6 +6,7 @@ We have successfully built the foundation of a professional, feature-rich replic
 
 - [x] **Complete Project Restructuring:** The original codebase has been replaced with a clean, modular C++ project structure.
 - [x] **Core System Design:** The system is built on a foundation of interfaces (`IReplicationDriver`, `IReplicationConnection`, `IReplicatedObject`) for maximum flexibility and extensibility.
+- [x]  **Sub-object Replication:** 
 - [x] **Network Transport Layer:** A basic UDP socket layer has been implemented, allowing the system to send and receive data over the network.
 - [x] **Efficient Property Replication:**
     - **Property Diffing:** The system only sends properties that have changed, significantly reducing bandwidth.
@@ -35,10 +36,6 @@ The system is designed around a few core concepts:
 ## 🚀 What's Next (Roadmap)
 
 Here are the next steps to make the system even more powerful and feature-complete:
-
-- [ ] **[In Progress] Sub-object Replication:**
-    - **Goal:** Allow objects to have "components" that are also replicated.
-    - **Status:** I am currently implementing this feature. I have added a `UReplicatedComponent` class and updated the driver to handle sub-objects. I am currently fixing a compilation error related to this change.
 - [ ] **Dormancy and Relevance:**
     - **Goal:** Further optimize bandwidth by not replicating objects that are not changing or are not relevant to a client (e.g., too far away).
 - [ ] **RPCs with Parameters:**
