@@ -42,7 +42,7 @@ public:
     void RegisterObject(IReplicatedObject* Obj);
     void SetObjectOwner(IReplicatedObject* Obj, std::shared_ptr<IReplicationConnection> NewOwner);
 
-private:
+protected:
     void HandleRPC(const std::vector<uint8_t>& RPCData);
 
     FSocket ListenSocket;

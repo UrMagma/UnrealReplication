@@ -20,115 +20,113 @@ public:
     {
         NetID = InNetID;
         RegisterReplicatedProperties();
+
+        // Register our RPCs
+        REGISTER_RPC(MyReplicatedObject, Server_UpdatePlayerMessage);
     }
 
     void RegisterReplicatedProperties() override
     {
         ReplicatedProperties.push_back(&NetID);
+        ReplicatedProperties.push_back(&PlayerName);
+        ReplicatedProperties.push_back(&LastMessage);
+    }
+
+    // --- RPC Definition ---
+    // This is the function that will be executed on the authoritative instance.
+    void Server_UpdatePlayerMessage(const FString& NewMessage, int32_t SomeValue)
+    {
+        std::cout << "[RPC EXEC] Server_UpdatePlayerMessage called on object " << (uint64_t)NetID << std::endl;
+        std::cout << "           NewMessage: " << NewMessage.ToString().c_str() << std::endl;
+        std::cout << "           SomeValue: " << SomeValue << std::endl;
+        LastMessage = NewMessage;
     }
 
     uint64_t GetNetID() const override { return NetID; }
     float GetPriority() const override { return 1.0f; }
+    bool HasAuthority() const override { return bHasAuthority; }
 
-    bool HasAuthority() const override
+    void Print() const
     {
-        // In a real client/server architecture, the client would need to know
-        // its own connection to check for ownership. For this example,
-        // we'll simulate this by having a flag.
-        return bHasAuthority;
+        std::cout << "  NetID: " << (uint64_t)NetID << std::endl;
+        std::cout << "  PlayerName: " << ((FString)PlayerName).ToString().c_str() << std::endl;
+        std::cout << "  LastMessage: " << ((FString)LastMessage).ToString().c_str() << std::endl;
     }
 
-    // Declare an RPC that requires authority
-    DECLARE_RPC(Server_DoSomething);
-
-    FRepProperty<uint64_t> NetID = 0;
-    bool bHasAuthority = false; // By default, no authority
+    bool bHasAuthority = false;
+    FRepProperty<uint64_t> NetID;
+    FRepProperty<FString> PlayerName;
+    FRepProperty<FString> LastMessage;
 };
 
-// Implement the RPC
-IMPLEMENT_RPC(MyReplicatedObject, Server_DoSomething);
-
-
-// Global state to coordinate the test
-std::atomic<bool> bServerShouldStop = false;
-
-// Server logic
-void RunServer(ReplicationDriver& Driver)
+// This is a dummy driver class for testing purposes.
+// It gives us direct access to the HandleRPC method.
+class TestReplicationDriver : public ReplicationDriver
 {
-    while (!bServerShouldStop)
+public:
+    void TestHandleRPC(const std::vector<uint8_t>& PacketData)
     {
-        Driver.Tick(0.016f);
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        HandleRPC(PacketData);
     }
-    std::cout << "[Server] Shutting down." << std::endl;
-}
+};
 
-// Client logic
-void RunClient(FSocket& ClientSocket)
-{
-    // Send a "hello" message to the server
-    std::vector<uint8_t> HelloMessage = { 'h', 'e', 'l', 'l', 'o' };
-    ClientSocket.SendTo(HelloMessage, "127.0.0.1", 8888);
-    std::cout << "[Client] Sent hello message." << std::endl;
-}
 
 int main()
 {
-    std::cout << "--- GlobalReplication Ownership Test ---" << std::endl;
+    std::cout << "--- RPC with Parameters Test ---" << std::endl;
 
-    // 1. Create a replicated object on the server
-    MyReplicatedObject ServerObj(101);
-    ServerObj.bHasAuthority = true; // Server has authority initially
-    std::cout << "[Server] Created object " << ServerObj.GetNetID() << std::endl;
+    // 1. Create a "server-side" object instance. This is the one that has authority.
+    MyReplicatedObject ServerObject(101);
+    ServerObject.bHasAuthority = true;
+    ServerObject.PlayerName = "Jules";
+    ServerObject.LastMessage = "Initial";
 
-    // 2. Create and initialize the server driver
-    ReplicationDriver Driver;
-    Driver.RegisterObject(&ServerObj);
+    std::cout << "\n[Server] Initial state:" << std::endl;
+    ServerObject.Print();
 
-    Driver.OnNewConnection = [&](std::shared_ptr<IReplicationConnection> NewConn)
+    // 2. Create a "client-side" representation of the object.
+    MyReplicatedObject ClientObject(101);
+    ClientObject.bHasAuthority = false;
+
+    // 3. Simulate the client calling the RPC.
+    FString MessageToSend = "Hello from the client!";
+    int32_t ValueToSend = 42;
+
+    std::vector<uint8_t> ParamBuffer;
+    FMemoryArchive SaveParamsArchive(ParamBuffer, true);
+    SaveParamsArchive << MessageToSend << ValueToSend;
+
+    FRPCData RpcData;
+    RpcData.NetID = ClientObject.GetNetID();
+    RpcData.FunctionName = "MyReplicatedObject::Server_UpdatePlayerMessage";
+    RpcData.Parameters = ParamBuffer;
+
+    std::vector<uint8_t> PacketPayload;
+    FMemoryArchive SavePacketArchive(PacketPayload, true);
+    RpcData.Serialize(SavePacketArchive);
+
+    std::cout << "\n[Client] Calling RPC with message: '" << MessageToSend.ToString().c_str() << "' and value: " << ValueToSend << std::endl;
+
+    // 4. The server's driver receives this payload and processes it.
+    TestReplicationDriver Driver;
+    Driver.RegisterObject(&ServerObject);
+    Driver.TestHandleRPC(PacketPayload);
+
+    // 5. Verify the state of the server object was changed by the RPC.
+    std::cout << "\n[Server] Final state:" << std::endl;
+    ServerObject.Print();
+
+    std::cout << "\n--- Verification ---" << std::endl;
+    if (((FString)ServerObject.LastMessage) == MessageToSend)
     {
-        std::cout << "[Server] New connection established. Transferring ownership of object " << ServerObj.GetNetID() << std::endl;
-        Driver.SetObjectOwner(&ServerObj, NewConn);
-
-        // In a real implementation, the client would be notified of the ownership change.
-        // For this test, we'll just assume the client now has authority.
-    };
-
-    if (!Driver.Init(8888))
+        std::cout << "SUCCESS: The RPC was executed correctly." << std::endl;
+    }
+    else
     {
+        std::cout << "FAILED: The RPC did not modify the server state." << std::endl;
         return 1;
     }
-    std::cout << "[Server] Listening on port 8888" << std::endl;
-
-    // 3. Create the client socket
-    FSocket ClientSocket;
-    if (!ClientSocket.Create())
-    {
-        return 1;
-    }
-
-    // 4. Run the server and client in separate threads
-    std::thread ServerThread(RunServer, std::ref(Driver));
-    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Give server time to start
-    std::thread ClientThread(RunClient, std::ref(ClientSocket));
-
-    // 5. Wait a moment for the connection to be established and ownership transferred
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-
-    // 6. Now, create a client-side representation of the object and call an RPC
-    // that requires authority. Since ownership was transferred, this should execute locally.
-    std::cout << "\n[Client] Attempting to call RPC with authority..." << std::endl;
-    MyReplicatedObject ClientObj(101);
-    ClientObj.bHasAuthority = true; // Simulate the client knowing it has authority
-    ClientObj.Server_DoSomething();
-
-
-    // 7. Stop the server
-    bServerShouldStop = true;
-    ServerThread.join();
-    ClientThread.join();
 
     std::cout << "\n--- Test Complete ---" << std::endl;
-
     return 0;
 }

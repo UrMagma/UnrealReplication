@@ -4,6 +4,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "DataTypes.h"
+#include "RPC.h"
+
 enum class EPacketType : uint8_t
 {
     Property,
@@ -17,6 +20,11 @@ class UReplicatedComponent;
 class IReplicationConnection;
 class IReplicationDriver;
 
+// Forward declarations for serialization operators
+class FString;
+template<typename T>
+class TArray;
+
 /**
  * @brief A virtual archive for serializing data.
  * This is a simplified version of Unreal Engine's FArchive.
@@ -29,6 +37,20 @@ public:
     virtual void Serialize(void* Data, int64_t Num) = 0;
 
     bool IsSaving() const { return bIsSaving; }
+
+    // Serialization operators for fundamental types
+    FArchive& operator<<(uint8_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(uint32_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(uint64_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(int32_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(int64_t& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(float& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+    FArchive& operator<<(bool& Val) { Serialize(&Val, sizeof(Val)); return *this; }
+
+    // Serialization operators for complex types
+    FArchive& operator<<(FString& Val) { Val.Serialize(*this); return *this; }
+    template<typename T>
+    FArchive& operator<<(TArray<T>& Val) { Val.Serialize(*this); return *this; }
 
 protected:
     bool bIsSaving;
@@ -71,6 +93,14 @@ public:
      * @return A vector of pointers to the replicated properties.
      */
     const std::vector<FRepPropertyBase*>& GetReplicatedProperties() const { return ReplicatedProperties; }
+
+    /**
+     * @brief Sends an RPC from a non-authoritative instance to the authoritative instance.
+     * @param RpcName The registered name of the RPC (e.g., "ClassName::FunctionName").
+     * @param args The arguments to pass to the RPC.
+     */
+    template<typename... Args>
+    void SendRPC(const std::string& RpcName, Args&&... args);
 
 protected:
     /**
@@ -119,9 +149,9 @@ public:
 
     /**
      * @brief Sends an RPC over the connection.
-     * @param RPCData The raw byte data for the RPC.
+     * @param Data The RPC data payload.
      */
-    virtual void SendRPC(const std::vector<uint8_t>& RPCData) = 0;
+    virtual void SendRPC(const FRPCData& Data) = 0;
 
     /**
      * @brief Adds an object to be replicated over this connection.

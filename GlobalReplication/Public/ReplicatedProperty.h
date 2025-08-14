@@ -47,7 +47,7 @@ public:
     // Serialize the property's value into an archive.
     virtual void Serialize(FArchive& Ar) override
     {
-        Ar.Serialize(&Value, sizeof(T));
+        Ar << Value;
     }
 
     // Check if the property has been changed since the last update.

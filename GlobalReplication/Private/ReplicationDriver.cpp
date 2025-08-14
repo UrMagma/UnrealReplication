@@ -58,9 +58,9 @@ void ReplicationDriver::SetObjectOwner(IReplicatedObject* Obj, std::shared_ptr<I
     }
 }
 
-void ReplicationDriver::HandleRPC(const std::vector<uint8_t>& RPCData)
+void ReplicationDriver::HandleRPC(const std::vector<uint8_t>& PacketData)
 {
-    FMemoryArchive Ar(const_cast<std::vector<uint8_t>&>(RPCData), false);
+    FMemoryArchive Ar(const_cast<std::vector<uint8_t>&>(PacketData), false);
     FRPCData RpcData;
     RpcData.Serialize(Ar);
 
@@ -78,7 +78,9 @@ void ReplicationDriver::HandleRPC(const std::vector<uint8_t>& RPCData)
         return;
     }
 
-    Thunk(ObjIt->second, Ar);
+    // The thunk expects an archive containing only the parameters.
+    FMemoryArchive ParamArchive(RpcData.Parameters, false);
+    Thunk(ObjIt->second, ParamArchive);
 }
 
 void ReplicationDriver::Tick(float DeltaTime)
@@ -183,11 +185,19 @@ void ReplicationDriver::Tick(float DeltaTime)
         auto& RPCBuffer = static_cast<ReplicationConnection*>(Conn.get())->GetOutgoingRPCBuffer();
         while(!RPCBuffer.empty())
         {
-            auto& RPCData = RPCBuffer.front();
+            FRPCData& RpcData = RPCBuffer.front();
+
+            // Serialize the FRPCData struct into a buffer
+            std::vector<uint8_t> RpcPayload;
+            FMemoryArchive Ar(RpcPayload, true);
+            RpcData.Serialize(Ar);
+
+            // Prepend the packet type and send
             std::vector<uint8_t> Packet;
             Packet.push_back((uint8_t)EPacketType::RPC);
-            Packet.insert(Packet.end(), RPCData.begin(), RPCData.end());
+            Packet.insert(Packet.end(), RpcPayload.begin(), RpcPayload.end());
             Conn->SendData(ListenSocket, Packet);
+
             RPCBuffer.pop();
         }
     }

@@ -13,7 +13,7 @@ public:
     virtual ~ReplicationConnection() = default;
 
     virtual void SendData(FSocket& Socket, const std::vector<uint8_t>& Data) override;
-    virtual void SendRPC(const std::vector<uint8_t>& RPCData) override;
+    virtual void SendRPC(const FRPCData& Data) override;
 
     virtual void AddReplicatedObject(IReplicatedObject* Obj) override;
     virtual void RemoveReplicatedObject(IReplicatedObject* Obj) override;
@@ -22,10 +22,10 @@ public:
     const sockaddr_in& GetAddress() const { return Address; }
 
     // This is a temporary way to get the outgoing RPC buffer for the example
-    std::queue<std::vector<uint8_t>>& GetOutgoingRPCBuffer() { return OutgoingRPCBuffer; }
+    std::queue<FRPCData>& GetOutgoingRPCBuffer() { return OutgoingRPCBuffer; }
 
 private:
     std::unordered_map<uint64_t, IReplicatedObject*> ReplicatedObjects;
     sockaddr_in Address;
-    std::queue<std::vector<uint8_t>> OutgoingRPCBuffer;
+    std::queue<FRPCData> OutgoingRPCBuffer;
 };

@@ -83,10 +83,24 @@ CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.s: 
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/GlobalReplication/Private/MemoryArchive.cpp -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.s
 
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o: CMakeFiles/GlobalReplication.dir/flags.make
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o: /app/GlobalReplication/Private/RPC.cpp
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o: CMakeFiles/GlobalReplication.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o -MF CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o.d -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o -c /app/GlobalReplication/Private/RPC.cpp
+
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /app/GlobalReplication/Private/RPC.cpp > CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.i
+
+CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /app/GlobalReplication/Private/RPC.cpp -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.s
+
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o: CMakeFiles/GlobalReplication.dir/flags.make
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o: /app/GlobalReplication/Private/ReplicationConnection.cpp
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o: CMakeFiles/GlobalReplication.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o -MF CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o.d -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o -c /app/GlobalReplication/Private/ReplicationConnection.cpp
 
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.i: cmake_force
@@ -100,7 +114,7 @@ CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o: CMakeFiles/GlobalReplication.dir/flags.make
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o: /app/GlobalReplication/Private/ReplicationDriver.cpp
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o: CMakeFiles/GlobalReplication.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o -MF CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o.d -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o -c /app/GlobalReplication/Private/ReplicationDriver.cpp
 
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.i: cmake_force
@@ -114,7 +128,7 @@ CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o: CMakeFiles/GlobalReplication.dir/flags.make
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o: /app/GlobalReplication/Private/Socket.cpp
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o: CMakeFiles/GlobalReplication.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o -MF CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o.d -o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o -c /app/GlobalReplication/Private/Socket.cpp
 
 CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.i: cmake_force
@@ -128,6 +142,7 @@ CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.s: cmake_f
 # Object files for target GlobalReplication
 GlobalReplication_OBJECTS = \
 "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o" \
+"CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o" \
 "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o" \
 "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o" \
 "CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o"
@@ -136,12 +151,13 @@ GlobalReplication_OBJECTS = \
 GlobalReplication_EXTERNAL_OBJECTS =
 
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o
+libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/build.make
 libGlobalReplication.a: CMakeFiles/GlobalReplication.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX static library libGlobalReplication.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/app/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libGlobalReplication.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/GlobalReplication.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/GlobalReplication.dir/link.txt --verbose=$(VERBOSE)
 

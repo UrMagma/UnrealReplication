@@ -5,11 +5,14 @@
 #include <unordered_map>
 #include <iostream>
 #include <vector>
-#include "GlobalReplication.h" // For FArchive
-#include "MemoryArchive.h" // For FMemoryArchive
+#include <functional>
+#include <string>
+#include <cstdint>
+#include <unordered_map>
+#include <iostream>
 
+class FArchive;
 class IReplicatedObject;
-class IReplicationConnection;
 
 // A function that can call an RPC with serialized parameters.
 using RPC_Thunk = std::function<void(IReplicatedObject*, FArchive&)>;
@@ -65,49 +68,34 @@ struct FRPCData
 {
     uint64_t NetID;
     std::string FunctionName;
+    std::vector<uint8_t> Parameters;
 
-    void Serialize(FArchive& Ar)
-    {
-        if (Ar.IsSaving())
-        {
-            size_t NameLen = FunctionName.size();
-            Ar.Serialize(&NetID, sizeof(NetID));
-            Ar.Serialize(&NameLen, sizeof(NameLen));
-            Ar.Serialize((void*)FunctionName.data(), NameLen);
-        }
-        else
-        {
-            size_t NameLen;
-            Ar.Serialize(&NetID, sizeof(NetID));
-            Ar.Serialize(&NameLen, sizeof(NameLen));
-            FunctionName.resize(NameLen);
-            Ar.Serialize((void*)FunctionName.data(), NameLen);
-        }
-    }
+    void Serialize(FArchive& Ar);
 };
 
 
-// Macro to declare an RPC in a header file.
-#define DECLARE_RPC(RpcFunc) \
-    void RpcFunc(); \
-    static RPCRegistrar Registrar_##RpcFunc;
+#include <tuple>
+#include <utility>
 
-// Macro to implement an RPC in a .cpp file.
-#define IMPLEMENT_RPC(ClassName, RpcFunc) \
-    void ClassName::RpcFunc() \
-    { \
-        if (HasAuthority()) \
-        { \
-            std::cout << "Executing RPC on authority: " #RpcFunc << std::endl; \
-        } \
-        else \
-        { \
-            /* This is where we would serialize and send the RPC */ \
-            /* For the example, this is done manually in main.cpp */ \
-        } \
-    } \
-    RPCRegistrar ClassName::Registrar_##RpcFunc(#ClassName "::" #RpcFunc, \
-        [](IReplicatedObject* Obj, FArchive& Ar) \
-        { \
-            static_cast<ClassName*>(Obj)->RpcFunc(); \
-        });
+// Creates a thunk (a generic function wrapper) for a specific member function.
+// This thunk knows how to deserialize arguments from an archive and call the member function.
+template<typename T, typename... Args>
+RPC_Thunk CreateThunk(void (T::*Func)(Args...))
+{
+    return [Func](IReplicatedObject* Obj, FArchive& Ar) {
+        // Create a tuple to hold the deserialized arguments.
+        // std::decay_t is used to handle types like 'const FString&' correctly, converting them to 'FString'.
+        std::tuple<std::decay_t<Args>...> InArgs;
+
+        // Use a C++17 fold expression to deserialize all arguments from the archive into the tuple.
+        std::apply([&](auto&... args){ ( (Ar << args), ...); }, InArgs);
+
+        // Use std::apply to call the member function pointer with the arguments from the tuple.
+        std::apply([&](auto&... args){ (static_cast<T*>(Obj)->*Func)(std::forward<Args>(args)...); }, InArgs);
+    };
+}
+
+// A simple macro to register a member function as an RPC.
+// This should be called in the constructor of the replicated object.
+#define REGISTER_RPC(ClassName, FuncName) \
+    RPCRegistry::Get().Register(#ClassName "::" #FuncName, CreateThunk(&ClassName::FuncName))

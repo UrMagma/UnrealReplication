@@ -166,6 +166,30 @@ GlobalReplication/Private/MemoryArchive.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.s
 .PHONY : GlobalReplication/Private/MemoryArchive.cpp.s
 
+GlobalReplication/Private/RPC.o: GlobalReplication/Private/RPC.cpp.o
+.PHONY : GlobalReplication/Private/RPC.o
+
+# target to build an object file
+GlobalReplication/Private/RPC.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.o
+.PHONY : GlobalReplication/Private/RPC.cpp.o
+
+GlobalReplication/Private/RPC.i: GlobalReplication/Private/RPC.cpp.i
+.PHONY : GlobalReplication/Private/RPC.i
+
+# target to preprocess a source file
+GlobalReplication/Private/RPC.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.i
+.PHONY : GlobalReplication/Private/RPC.cpp.i
+
+GlobalReplication/Private/RPC.s: GlobalReplication/Private/RPC.cpp.s
+.PHONY : GlobalReplication/Private/RPC.s
+
+# target to generate assembly for a file
+GlobalReplication/Private/RPC.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/GlobalReplication.dir/build.make CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/RPC.cpp.s
+.PHONY : GlobalReplication/Private/RPC.cpp.s
+
 GlobalReplication/Private/ReplicationConnection.o: GlobalReplication/Private/ReplicationConnection.cpp.o
 .PHONY : GlobalReplication/Private/ReplicationConnection.o
 
@@ -275,6 +299,9 @@ help:
 	@echo "... GlobalReplication/Private/MemoryArchive.o"
 	@echo "... GlobalReplication/Private/MemoryArchive.i"
 	@echo "... GlobalReplication/Private/MemoryArchive.s"
+	@echo "... GlobalReplication/Private/RPC.o"
+	@echo "... GlobalReplication/Private/RPC.i"
+	@echo "... GlobalReplication/Private/RPC.s"
 	@echo "... GlobalReplication/Private/ReplicationConnection.o"
 	@echo "... GlobalReplication/Private/ReplicationConnection.i"
 	@echo "... GlobalReplication/Private/ReplicationConnection.s"

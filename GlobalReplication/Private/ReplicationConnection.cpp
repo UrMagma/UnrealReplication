@@ -15,10 +15,10 @@ void ReplicationConnection::SendData(FSocket& Socket, const std::vector<uint8_t>
     Socket.SendTo(Data, ip, ntohs(Address.sin_port));
 }
 
-void ReplicationConnection::SendRPC(const std::vector<uint8_t>& RPCData)
+void ReplicationConnection::SendRPC(const FRPCData& Data)
 {
-    std::cout << "Queueing RPC with size " << RPCData.size() << std::endl;
-    OutgoingRPCBuffer.push(RPCData);
+    std::cout << "Queueing RPC for object " << Data.NetID << ", function " << Data.FunctionName << std::endl;
+    OutgoingRPCBuffer.push(Data);
 }
 
 void ReplicationConnection::AddReplicatedObject(IReplicatedObject* Obj)
