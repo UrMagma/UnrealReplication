@@ -5,7 +5,6 @@
 #include "GlobalReplication/Public/ReplicatedProperty.h"
 #include "GlobalReplication/Public/Socket.h"
 #include "GlobalReplication/Public/RPC.h"
-#include "GlobalReplication/Public/ReplicatedComponent.h"
 #include <iostream>
 #include <vector>
 #include <cstdint>
@@ -13,46 +12,14 @@
 #include <atomic>
 #include <functional>
 
-class MyTestComponent : public UReplicatedComponent
-{
-public:
-    MyTestComponent(IReplicatedObject* InOwner, uint64_t InNetID)
-        : UReplicatedComponent(InOwner)
-    {
-        NetID = InNetID;
-        RegisterReplicatedProperties();
-    }
-
-    void RegisterReplicatedProperties() override
-    {
-        ReplicatedProperties.push_back(&CompHealth);
-    }
-
-    uint64_t GetNetID() const override { return NetID; }
-    float GetPriority() const override { return 1.0f; }
-    bool HasAuthority() const override { return GetOwner()->HasAuthority(); }
-
-    FRepProperty<int> CompHealth = 100;
-private:
-    uint64_t NetID;
-};
-
 // A simple replicated object for demonstration
 class MyReplicatedObject : public IReplicatedObject
 {
 public:
-    MyReplicatedObject(uint64_t InNetID = 0, bool bInHasAuthority = false)
-        : bHasAuthority(bInHasAuthority)
+    MyReplicatedObject(uint64_t InNetID = 0)
     {
         NetID = InNetID;
-        TestComponent = new MyTestComponent(this, NetID + 1);
         RegisterReplicatedProperties();
-        RegisterReplicatedSubObjects();
-    }
-
-    ~MyReplicatedObject()
-    {
-        delete TestComponent;
     }
 
     void RegisterReplicatedProperties() override
@@ -60,19 +27,26 @@ public:
         ReplicatedProperties.push_back(&NetID);
     }
 
-    void RegisterReplicatedSubObjects() override
-    {
-        AddComponent(TestComponent);
-    }
-
     uint64_t GetNetID() const override { return NetID; }
     float GetPriority() const override { return 1.0f; }
-    bool HasAuthority() const override { return bHasAuthority; }
 
-    MyTestComponent* TestComponent;
+    bool HasAuthority() const override
+    {
+        // In a real client/server architecture, the client would need to know
+        // its own connection to check for ownership. For this example,
+        // we'll simulate this by having a flag.
+        return bHasAuthority;
+    }
+
+    // Declare an RPC that requires authority
+    DECLARE_RPC(Server_DoSomething);
+
     FRepProperty<uint64_t> NetID = 0;
-    bool bHasAuthority;
+    bool bHasAuthority = false; // By default, no authority
 };
+
+// Implement the RPC
+IMPLEMENT_RPC(MyReplicatedObject, Server_DoSomething);
 
 
 // Global state to coordinate the test
@@ -100,23 +74,24 @@ void RunClient(FSocket& ClientSocket)
 
 int main()
 {
-    std::cout << "--- GlobalReplication Sub-object Test ---" << std::endl;
+    std::cout << "--- GlobalReplication Ownership Test ---" << std::endl;
 
     // 1. Create a replicated object on the server
-    MyReplicatedObject ServerObj(101, true); // Has authority
+    MyReplicatedObject ServerObj(101);
+    ServerObj.bHasAuthority = true; // Server has authority initially
     std::cout << "[Server] Created object " << ServerObj.GetNetID() << std::endl;
-    std::cout << "[Server] Created sub-object " << ServerObj.TestComponent->GetNetID() << std::endl;
-
 
     // 2. Create and initialize the server driver
     ReplicationDriver Driver;
-    Driver.RegisterObject(&ServerObj); // Register the object with the driver
-    Driver.RegisterObject(ServerObj.TestComponent); // Register the sub-object
+    Driver.RegisterObject(&ServerObj);
 
     Driver.OnNewConnection = [&](std::shared_ptr<IReplicationConnection> NewConn)
     {
-        std::cout << "[Server] New connection established. Adding object to replication list." << std::endl;
-        NewConn->AddReplicatedObject(&ServerObj);
+        std::cout << "[Server] New connection established. Transferring ownership of object " << ServerObj.GetNetID() << std::endl;
+        Driver.SetObjectOwner(&ServerObj, NewConn);
+
+        // In a real implementation, the client would be notified of the ownership change.
+        // For this test, we'll just assume the client now has authority.
     };
 
     if (!Driver.Init(8888))
@@ -137,8 +112,18 @@ int main()
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Give server time to start
     std::thread ClientThread(RunClient, std::ref(ClientSocket));
 
-    // 5. Wait for the test to complete
+    // 5. Wait a moment for the connection to be established and ownership transferred
     std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    // 6. Now, create a client-side representation of the object and call an RPC
+    // that requires authority. Since ownership was transferred, this should execute locally.
+    std::cout << "\n[Client] Attempting to call RPC with authority..." << std::endl;
+    MyReplicatedObject ClientObj(101);
+    ClientObj.bHasAuthority = true; // Simulate the client knowing it has authority
+    ClientObj.Server_DoSomething();
+
+
+    // 7. Stop the server
     bServerShouldStop = true;
     ServerThread.join();
     ClientThread.join();

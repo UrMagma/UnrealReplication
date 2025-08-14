@@ -1,5 +1,6 @@
 #include "GlobalReplication/Public/ReplicationDriver.h"
 #include "GlobalReplication/Public/ReplicationConnection.h"
+#include "GlobalReplication/Public/ReplicatedComponent.h"
 #include "GlobalReplication/Public/MemoryArchive.h"
 #include "GlobalReplication/Public/Socket.h"
 #include "GlobalReplication/Public/RPC.h"
@@ -43,6 +44,17 @@ void ReplicationDriver::RegisterObject(IReplicatedObject* Obj)
     if (Obj)
     {
         NetIDToObjectMap[Obj->GetNetID()] = Obj;
+    }
+}
+
+void ReplicationDriver::SetObjectOwner(IReplicatedObject* Obj, std::shared_ptr<IReplicationConnection> NewOwner)
+{
+    if (Obj)
+    {
+        Obj->SetOwningConnection(NewOwner);
+        // In a real implementation, we would need to send a network message
+        // to inform clients of this ownership change.
+        std::cout << "Set owner of object " << Obj->GetNetID() << std::endl;
     }
 }
 
@@ -115,9 +127,9 @@ void ReplicationDriver::Tick(float DeltaTime)
         for (const auto& ObjPair : ReplicatedObjects)
         {
             AllObjectsToReplicate.push_back(ObjPair.second);
-            for (auto* SubObj : ObjPair.second->SubObjects)
+            for (auto* SubObj : ObjPair.second->GetSubObjects())
             {
-                AllObjectsToReplicate.push_back(SubObj);
+                AllObjectsToReplicate.push_back(static_cast<IReplicatedObject*>(SubObj));
             }
         }
 

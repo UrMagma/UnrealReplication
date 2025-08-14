@@ -40,6 +40,7 @@ public:
     virtual void AddConnection(std::shared_ptr<IReplicationConnection> Conn) override;
     virtual void RemoveConnection(std::shared_ptr<IReplicationConnection> Conn) override;
     void RegisterObject(IReplicatedObject* Obj);
+    void SetObjectOwner(IReplicatedObject* Obj, std::shared_ptr<IReplicationConnection> NewOwner);
 
 private:
     void HandleRPC(const std::vector<uint8_t>& RPCData);

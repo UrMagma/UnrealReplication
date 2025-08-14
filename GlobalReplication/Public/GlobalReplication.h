@@ -63,6 +63,9 @@ public:
      */
     virtual bool HasAuthority() const = 0;
 
+    void SetOwningConnection(std::shared_ptr<IReplicationConnection> Conn) { OwningConnection = Conn; }
+    std::shared_ptr<IReplicationConnection> GetOwningConnection() const { return OwningConnection; }
+
     /**
      * @brief Gets the list of replicated properties for this object.
      * @return A vector of pointers to the replicated properties.
@@ -91,6 +94,10 @@ protected:
 
     std::vector<FRepPropertyBase*> ReplicatedProperties;
     std::vector<UReplicatedComponent*> SubObjects;
+    std::shared_ptr<IReplicationConnection> OwningConnection;
+
+public:
+    const std::vector<UReplicatedComponent*>& GetSubObjects() const { return SubObjects; }
 };
 
 class FSocket;
