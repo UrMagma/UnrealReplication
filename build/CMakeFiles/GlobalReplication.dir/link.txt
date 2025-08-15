@@ -1,2 +1,0 @@
-/usr/bin/ar qc libGlobalReplication.a CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/MemoryArchive.cpp.o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationConnection.cpp.o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/ReplicationDriver.cpp.o CMakeFiles/GlobalReplication.dir/GlobalReplication/Private/Socket.cpp.o
-/usr/bin/ranlib libGlobalReplication.a
